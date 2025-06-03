@@ -75,7 +75,7 @@ def project_points(points_3d: np.array,
 
 
 def visualize_projection(image: np.array, points_3d: np.array,
-                         points_2d: np.array, intensities: Optional[np.array]  = None,
+                         points_2d: np.array, intensities: Optional[np.array] = None,
                          color_map: int = cv2.COLORMAP_JET) -> np.array:
     """
     visualizes the projection of point cloud using depth or intensity information.
@@ -118,3 +118,28 @@ def normalize_pixels(points, K):
     pts_hom = np.hstack((points, np.ones((points.shape[0], 1))))
     pts_norm = (np.linalg.inv(K)@pts_hom.T).T
     return pts_norm[:, :2]
+
+
+def visualize_rgb_event(evt_img, rgb_img, K_ev, K_rgb, extrinsics):
+
+    R = extrinsics[:3, :3]
+    proj_matrix = K_rgb @ R @ np.linalg.inv(K_ev)
+    ht, wd, _ = evt_img.shape
+
+    # coords: ht, wd, 2
+    coords = np.stack(np.meshgrid(np.arange(wd), np.arange(ht)), axis=-1)
+    # coords_hom: ht, wd, 3
+    coords_hom = np.concatenate((coords, np.ones((ht, wd, 1))), axis=-1)
+    # mapping: ht, wd, 3
+    mapping = (proj_matrix @ coords_hom[..., None]).squeeze()
+    # mapping: ht, wd, 2
+    mapping = (mapping/mapping[..., -1][..., None])[..., :2]
+    mapping = mapping.astype('float32')
+    proj_img = cv2.remap(rgb_img, mapping, None, interpolation=cv2.INTER_CUBIC)
+    blue = np.array([255, 0, 0])
+    red = np.array([0, 0, 255])
+    proj_img[np.all(evt_img==blue, axis=-1)] = blue
+    proj_img[np.all(evt_img==red, axis=-1)] = red
+
+    return proj_img
+

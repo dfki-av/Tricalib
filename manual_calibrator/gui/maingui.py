@@ -25,7 +25,7 @@ from PyQt5.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
 from manual_calibrator.utils.io import write_json, load_json, ucode_icon, fxfycxcy_to_matrix
 from manual_calibrator.utils.projection import normalize_pixels
 from manual_calibrator.utils.constants import CAMERA4_C2_KMATRIX, UNIFICATION_MATRIX
-from manual_calibrator.gui.image import ImageViewer
+from manual_calibrator.gui.image import ImageViewer, EventImageViewer
 from manual_calibrator.gui.secgui import SecondaryWindow
 
 
@@ -45,6 +45,7 @@ class PrimaryWindow(QMainWindow):
         self.selected_2d_points = []
         self.selected_3d_points = []
         self.selected_ev_points = []
+        self._extrinsic_data = dict()
         self.base_image = None
         self.image_backups = []
         self.parent_conn_lidar, self.child_conn_lidar = mp.Pipe()
@@ -130,30 +131,34 @@ class PrimaryWindow(QMainWindow):
 
         calib_menu = menu.addMenu("&Calibration")
         compute_rgb_ev = QAction(ucode_icon("\U0001F4BB"),
-                          "&Compute \U0001F4F7 vs. \U000026A1", self)
-        compute_rgb_ev.setStatusTip("Compute the Calibration between RGB and Event camera")
+                                 "&Compute \U0001F4F7 vs. \U000026A1", self)
+        compute_rgb_ev.setStatusTip(
+            "Compute the Calibration between RGB and Event camera")
         compute_rgb_ev.triggered.connect(self.compute_evt_rgb_transform)
         calib_menu.addAction(compute_rgb_ev)
 
         calib_menu.addSeparator()
         project = QAction(ucode_icon("\U0001F52E"),
                           "&Project \U0001F4F7 on \U000026A1", self)
-        project.setStatusTip("project the RGB on event data using calibration  and visualize")
+        project.setStatusTip(
+            "project the RGB on event data using calibration  and visualize")
         project.triggered.connect(self.project_extrinsics_rgb_ev)
         calib_menu.addAction(project)
 
         calib_menu.addSeparator()
 
         compute_rgb_pc = QAction(ucode_icon("\U0001F4BB"),
-                          "&Compute \U0001F4F7 vs. \U0001F7E2", self)
-        compute_rgb_pc.setStatusTip("Compute the Calibration between RGB and Point Cloud")
+                                 "&Compute \U0001F4F7 vs. \U0001F7E2", self)
+        compute_rgb_pc.setStatusTip(
+            "Compute the Calibration between RGB and Point Cloud")
         compute_rgb_pc.triggered.connect(self.compute_rgb_pc_transform)
         calib_menu.addAction(compute_rgb_pc)
         calib_menu.addSeparator()
 
         project = QAction(ucode_icon("\U0001F52E"),
                           "&Project \U0001F7E2 on \U0001F4F7", self)
-        project.setStatusTip("project the point cloud on RGB using calibration  and visualize")
+        project.setStatusTip(
+            "project the point cloud on RGB using calibration  and visualize")
         project.triggered.connect(self.project_extrinsics_pc_rgb)
         calib_menu.addAction(project)
 
@@ -205,8 +210,9 @@ class PrimaryWindow(QMainWindow):
         imageviewer.exec_()
 
     def project_extrinsics_rgb_ev(self):
-        # TODO
-        pass
+        imageviewer = EventImageViewer(self.event_image, self.image,
+                                       self._extrinsic_data)
+        imageviewer.exec_()
 
     def mousePressEvent(self, event):
         """Capture mouse click events in the image viewer."""
@@ -220,7 +226,7 @@ class PrimaryWindow(QMainWindow):
             pixmap_size = self.image_label.pixmap().size()
             label_size = self.image_label.size()
 
-             # Calculate scaling ratio (image might not fill the label fully)
+            # Calculate scaling ratio (image might not fill the label fully)
             scale_x = pixmap_size.width() / label_size.width()
             scale_y = pixmap_size.height() / label_size.height()
 
@@ -244,8 +250,6 @@ class PrimaryWindow(QMainWindow):
                     print("Click is outside the image bounds.")
             else:
                 print("No image loaded.")
-
-    
 
     def draw_circle(self, position: QPoint, p_index: int):
         """highlights the selected point with numbering in the image viewer.
@@ -351,7 +355,6 @@ class PrimaryWindow(QMainWindow):
             self.save_button.setEnabled(True)
             self.project_button.setEnabled(True)
 
-
     def load_image(self):
         """GUI button function. Loads the image from the disk"""
         # Load an image
@@ -366,9 +369,9 @@ class PrimaryWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Load Event Image", "", "Event Images (*.png *.jpg)")
         if file_path:
-            event_image = cv2.imread(file_path)
+            self.event_image = cv2.imread(file_path)
             process = mp.Process(target=run_event_data_visualizer, args=(
-                self.child_conn_event, event_image, file_path))
+                self.child_conn_event, self.event_image, file_path))
             self.pv_processes.append(process)
             process.start()
             self.start_ev_timer()
@@ -389,10 +392,10 @@ class PrimaryWindow(QMainWindow):
             self, "Save Extrinsics", "", "JSON File (*.json)")
         if file_path:
             data = dict(image_points=self.selected_2d_points,
-                        lidar_points=[i.tolist() for i in self.selected_3d_points],
+                        lidar_points=[i.tolist()
+                                      for i in self.selected_3d_points],
                         event_points=self.selected_ev_points)
             write_json(file_path, data)
-
 
     def save_extrinsics(self):
         """GUI button function. Saves the calculates extrinsics to the disk."""
@@ -400,7 +403,6 @@ class PrimaryWindow(QMainWindow):
             self, "Save Extrinsics", "", "JSON File (*.json)")
         if file_path:
             write_json(file_path, self._extrinsic_data)
-
 
     def display_pointcloud(self, cloud=None, scalar=None, cmap=None):
         """Instantiates another mp Process to display the loaded point cloud.
@@ -410,7 +412,7 @@ class PrimaryWindow(QMainWindow):
         self.pv_processes.append(process)
         process.start()
         self.start_pc_timer()
-    
+
     def display_image(self):
         """Function to display the image once the image is loaded."""
         # Convert the image for PyQt display
@@ -452,14 +454,28 @@ class PrimaryWindow(QMainWindow):
         if len(self.selected_2d_points) >= 4 and len(self.selected_ev_points) >= 4:
             points_rgb = np.array(self.selected_2d_points, dtype=np.float32)
             points_evt = np.array(self.selected_ev_points, dtype=np.float32)
-            print(points_rgb, points_evt)
-            points_rgb_norm = normalize_pixels(points_rgb, self.rgb_camera_matrix)
-            points_evt_norm = normalize_pixels(points_evt, self.evt_camera_matrix)
-            E, _= cv2.findEssentialMat(points_rgb_norm, points_evt_norm, method=cv2.RANSAC, prob=0.999, threshold=1.0)
-            print(E.shape)
+            points_rgb_norm = normalize_pixels(
+                points_rgb, self.rgb_camera_matrix)
+            points_evt_norm = normalize_pixels(
+                points_evt, self.evt_camera_matrix)
+            E, _ = cv2.findEssentialMat(
+                points_rgb_norm, points_evt_norm, method=cv2.RANSAC, prob=0.999, threshold=1.0)
             E = E[:3, :]
-            out = cv2.recoverPose(E=E, points1=points_rgb_norm, points2=points_evt_norm,) 
-            print(out)
+            out = cv2.recoverPose(
+                E=E, points1=points_rgb_norm, points2=points_evt_norm,)
+            T_rgb_evt = np.eye(4)
+            T_rgb_evt[:3, :3] = out[1]
+            T_rgb_evt[:3, 3] = out[2].flatten()
+
+            rgb_evt_T_data = dict(T_rgb_evt=dict(data=T_rgb_evt),
+                                  K_evt=dict(data=self.evt_camera_matrix),
+                                  K_rgb=dict(data=self.rgb_camera_matrix))
+
+            self._extrinsic_data.update(rgb_evt_T_data)
+            print('RGB to Event Transformation Matrix:')
+            print(T_rgb_evt)
+        else:
+            print("Error: Select at least 4 point correspondences.")
 
     def compute_rgb_pc_transform(self):
         """Computes the transformation matrix from the selected correspondences."""
@@ -485,8 +501,9 @@ class PrimaryWindow(QMainWindow):
                 T_lidar_to_cam = T@np.linalg.inv(um)
                 self.save_button.setEnabled(True)
                 self.project_button.setEnabled(True)
-                self._extrinsic_data = {"T_lidar_to_cam": {'data': T_lidar_to_cam.tolist()}, "T_cam_to_img": {'data': um.tolist()},
-                                        "cam_K": {'data': K.tolist()}}
+                self._extrinsic_data.update({"T_lidar_to_cam": {'data': T_lidar_to_cam.tolist()},
+                                             "T_cam_to_img": {'data': um.tolist()},
+                                             "cam_K": {'data': K.tolist()}})
 
             else:
                 print("Error: Unable to compute transformation.")

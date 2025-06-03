@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QImage
 
 # internal imports
-from manual_calibrator.utils.projection import project_points, visualize_projection
+from manual_calibrator.utils.projection import project_points, visualize_projection, visualize_rgb_event
 
 
 class ImageViewer(QDialog):
@@ -111,6 +111,68 @@ class ImageViewer(QDialog):
         self.image = visualize_projection(
             self.image, points_3d, points_2d, intensities)
 
+    def save_image(self):
+        """save image to disk."""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Image", "", "Image File (*.jpeg; *.png)")
+        if file_path:
+            imageio.imwrite(file_path, self.image)
+
+
+class EventImageViewer(QDialog):
+    """Secondary window for displaying the image."""
+
+    def __init__(self, evt_image, rgb_image, extrinsics_data):
+        super().__init__()
+        self.setWindowTitle("Event Projection Viewer")
+        self.setGeometry(100, 100, 800, 600)
+
+        # Layout
+
+        self.evt_image = evt_image
+        self.rgb_image = rgb_image
+        self.extrinsics = np.array(extrinsics_data['T_rgb_evt']['data'])
+        self.K_evt = np.array(extrinsics_data["K_evt"]['data'])
+        self.K_rgb = np.array(extrinsics_data['K_rgb']['data'])
+    
+        self.project()
+        self.initUI()
+
+    def initUI(self):
+        "initialize the GUI."
+
+        layout = QVBoxLayout()
+
+        h1_layout = QHBoxLayout()
+    
+        self.save_button = QPushButton("Save Projection")
+        self.save_button.clicked.connect(self.save_image)
+        h1_layout.addWidget(self.save_button)
+        h1_layout.setSpacing(10)
+
+        layout.addLayout(h1_layout)
+        # QLabel to display the image
+        self.image_label = QLabel(self)
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.display_image()
+        layout.addWidget(self.image_label)
+        self.setLayout(layout)
+
+    def display_image(self):
+        """displays the image in GUI"""
+        h, w, ch = self.image.shape
+        bytes_per_line = ch * w
+        q_image = QImage(self.image.data, w, h,
+                         bytes_per_line, QImage.Format_RGB888)
+        self.pixmap = QPixmap.fromImage(q_image)
+        self.image_label.setPixmap(self.pixmap)
+        self.image_label.setScaledContents(True)
+
+    def project(self):
+        """
+        """
+        self.image = visualize_rgb_event(self.evt_image, self.rgb_image,
+                            self.K_evt, self.K_rgb, self.extrinsics)
     def save_image(self):
         """save image to disk."""
         file_path, _ = QFileDialog.getSaveFileName(
