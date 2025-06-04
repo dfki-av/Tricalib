@@ -12,7 +12,8 @@ import numpy as np
 import cv2
 
 # internal imports
-from btc_calib.utils.constants import CAMERA4_C2_DISTORTION, CAMERA4_C2_KMATRIX, UNIFICATION_MATRIX
+from manual_calibrator.utils.constants import (CAMERA4_C2_DISTORTION, CAMERA4_C2_KMATRIX, UNIFICATION_MATRIX,
+                                               DSEC_R_RECT_EVENT, DSEC_R_RECT_RGB, DSEC_T_GT)
 
 
 def undistort_fisheye(image, return_newk=False):
@@ -122,6 +123,11 @@ def normalize_pixels(points, K):
 
 def visualize_rgb_event(evt_img, rgb_img, K_ev, K_rgb, extrinsics):
 
+    #extrinsics = DSEC_T_GT
+
+    extrinsics = DSEC_R_RECT_RGB@extrinsics@np.linalg.inv(DSEC_R_RECT_EVENT)
+    print('Final Transformation Used:')
+    print(extrinsics)
     R = extrinsics[:3, :3]
     proj_matrix = K_rgb @ R @ np.linalg.inv(K_ev)
     ht, wd, _ = evt_img.shape
@@ -138,8 +144,7 @@ def visualize_rgb_event(evt_img, rgb_img, K_ev, K_rgb, extrinsics):
     proj_img = cv2.remap(rgb_img, mapping, None, interpolation=cv2.INTER_CUBIC)
     blue = np.array([255, 0, 0])
     red = np.array([0, 0, 255])
-    proj_img[np.all(evt_img==blue, axis=-1)] = blue
-    proj_img[np.all(evt_img==red, axis=-1)] = red
+    proj_img[np.all(evt_img == blue, axis=-1)] = blue
+    proj_img[np.all(evt_img == red, axis=-1)] = red
 
     return proj_img
-
