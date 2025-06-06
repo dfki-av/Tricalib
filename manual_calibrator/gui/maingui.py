@@ -467,9 +467,9 @@ class PrimaryWindow(QMainWindow):
             T_rgb_evt[:3, :3] = out[1]
             T_rgb_evt[:3, 3] = out[2].flatten()
 
-            rgb_evt_T_data = dict(T_rgb_evt=dict(data=T_rgb_evt),
-                                  K_evt=dict(data=self.evt_camera_matrix),
-                                  K_rgb=dict(data=self.rgb_camera_matrix))
+            rgb_evt_T_data = dict(T_rgb_evt=dict(data=T_rgb_evt.tolist()),
+                                  K_evt=dict(data=self.evt_camera_matrix.tolist()),
+                                  K_rgb=dict(data=self.rgb_camera_matrix.tolist()))
 
             self._extrinsic_data.update(rgb_evt_T_data)
             print('RGB to Event Transformation Matrix:')
