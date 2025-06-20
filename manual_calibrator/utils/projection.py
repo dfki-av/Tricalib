@@ -75,6 +75,44 @@ def project_points(points_3d: np.array,
     return points_2d
 
 
+def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.ndarray):
+    """
+    Computes a transformation matrix between the lidar sensor and camera sensor.
+
+    Parameters:
+    -----------
+    _2d_pts: set of 2D points on the image plane.
+    _3d_pts: set of 3D points on the lidar plane.
+    K: intrinsic matrix of camera sensor.
+    U: Unification matrix (transforms from camera co-ordinate system to lidar co-ordinate system)
+    returns: None | tuple(transformation_matrix, unification_matrix)
+    """
+
+    if len(_2d_pts) >= 4 and len(_3d_pts) >= 4:
+        points_2d = np.array(_2d_pts, dtype=np.float32)
+        points_3d = np.array(_3d_pts, dtype=np.float32)
+
+        success, rvec, tvec = cv2.solvePnP(points_3d, points_2d, K, None)
+
+        if success:
+            R, _ = cv2.Rodrigues(rvec)
+            T = np.eye(4)
+            T[:3, :3] = R
+            T[:3, 3] = tvec.flatten()
+            print("Extrinsic Transformation Matrix:")
+            print(T)
+            if len(U) == 3:
+                um = np.eye(4)
+                um[:3, :3] = U
+                T_lidar_to_cam = T@np.linalg.inv(um)
+                return T_lidar_to_cam, um
+            else:
+                print("Error: Unable to compute transformation.")
+    else:
+        print("Error: Select at least 4 point correspondences.")
+    return None
+
+
 def visualize_projection(image: np.array, points_3d: np.array,
                          points_2d: np.array, intensities: Optional[np.array] = None,
                          color_map: int = cv2.COLORMAP_JET) -> np.array:
@@ -123,7 +161,7 @@ def normalize_pixels(points, K):
 
 def visualize_rgb_event(evt_img, rgb_img, K_ev, K_rgb, extrinsics):
 
-    #extrinsics = DSEC_T_GT
+    # extrinsics = DSEC_T_GT
 
     extrinsics = DSEC_R_RECT_RGB@extrinsics@np.linalg.inv(DSEC_R_RECT_EVENT)
     print('Final Transformation Used:')

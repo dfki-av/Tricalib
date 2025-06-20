@@ -23,7 +23,7 @@ from PyQt5.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
 
 # internal imports
 from manual_calibrator.utils.io import write_json, load_json, ucode_icon, fxfycxcy_to_matrix
-from manual_calibrator.utils.projection import normalize_pixels
+from manual_calibrator.utils.projection import normalize_pixels, compute_pnp_transform
 from manual_calibrator.utils.constants import CAMERA4_C2_KMATRIX, UNIFICATION_MATRIX
 from manual_calibrator.gui.image import ImageViewer, EventImageViewer
 from manual_calibrator.gui.secgui import SecondaryWindow
@@ -151,7 +151,7 @@ class PrimaryWindow(QMainWindow):
                                  "&Compute \U0001F4F7 vs. \U0001F7E2", self)
         compute_rgb_pc.setStatusTip(
             "Compute the Calibration between RGB and Point Cloud")
-        compute_rgb_pc.triggered.connect(self.compute_rgb_pc_transform)
+        compute_rgb_pc.triggered.connect(self.compute_pc_rgb_transform)
         calib_menu.addAction(compute_rgb_pc)
         calib_menu.addSeparator()
 
@@ -222,19 +222,19 @@ class PrimaryWindow(QMainWindow):
             label_pos = self.image_label.mapFromGlobal(event.globalPos())
             img_x = label_pos.x()
             img_y = label_pos.y()
-
-            pixmap_size = self.image_label.pixmap().size()
-            label_size = self.image_label.size()
-
-            # Calculate scaling ratio (image might not fill the label fully)
-            scale_x = pixmap_size.width() / label_size.width()
-            scale_y = pixmap_size.height() / label_size.height()
-
-            img_x = int(img_x * scale_x)
-            img_y = int(img_y * scale_y)
-
-            # Calculate the exact pixel coordinates in the image
             if self.image_label.pixmap():
+                pixmap_size = self.image_label.pixmap().size()
+                label_size = self.image_label.size()
+
+                # Calculate scaling ratio (image might not fill the label fully)
+                scale_x = pixmap_size.width() / label_size.width()
+                scale_y = pixmap_size.height() / label_size.height()
+
+                img_x = int(img_x * scale_x)
+                img_y = int(img_y * scale_y)
+
+                # Calculate the exact pixel coordinates in the image
+
                 pixmap_width = self.pixmap.width()
                 pixmap_height = self.pixmap.height()
 
@@ -302,6 +302,7 @@ class PrimaryWindow(QMainWindow):
             img = self.image_backups.pop()
             self.image_label.setPixmap(img)
             self.pixmap = img
+
         if self.selected_3d_points:
             self.selected_3d_points.pop()
 
@@ -468,7 +469,8 @@ class PrimaryWindow(QMainWindow):
             T_rgb_evt[:3, 3] = out[2].flatten()
 
             rgb_evt_T_data = dict(T_rgb_evt=dict(data=T_rgb_evt.tolist()),
-                                  K_evt=dict(data=self.evt_camera_matrix.tolist()),
+                                  K_evt=dict(
+                                      data=self.evt_camera_matrix.tolist()),
                                   K_rgb=dict(data=self.rgb_camera_matrix.tolist()))
 
             self._extrinsic_data.update(rgb_evt_T_data)
@@ -477,38 +479,29 @@ class PrimaryWindow(QMainWindow):
         else:
             print("Error: Select at least 4 point correspondences.")
 
-    def compute_rgb_pc_transform(self):
+    def compute_pc_evt_transform(self):
+        output = compute_pnp_transform(self.selected_ev_points,
+                                       self.selected_3d_points,
+                                       self.evt_camera_matrix, UNIFICATION_MATRIX)
+
+        if output is not None:
+            T_lidar_to_evt, um = output
+            self._extrinsic_data.update({"T_lidar_to_evt": {'data': T_lidar_to_evt.tolist()},
+                                        "T_cam_to_evt": {'data': um.tolist()},
+                                         "evt_K": {'data': self.evt_camera_matrix.tolist()}})
+
+    def compute_pc_rgb_transform(self):
         """Computes the transformation matrix from the selected correspondences."""
-        if len(self.selected_2d_points) >= 4 and len(self.selected_3d_points) >= 4:
-            if hasattr(self, 'k_matrix'):
-                K = self.k_matrix
-            else:
-                K = CAMERA4_C2_KMATRIX
-            points_2d = np.array(self.selected_2d_points, dtype=np.float32)
-            points_3d = np.array(self.selected_3d_points, dtype=np.float32)
 
-            # SolvePnP
-            success, rvec, tvec = cv2.solvePnP(points_3d, points_2d, K, None)
-            if success:
-                R, _ = cv2.Rodrigues(rvec)
-                T = np.eye(4)
-                T[:3, :3] = R
-                T[:3, 3] = tvec.flatten()
-                print("Extrinsic Transformation Matrix:")
-                print(T)
-                um = np.eye(4)
-                um[:3, :3] = UNIFICATION_MATRIX
-                T_lidar_to_cam = T@np.linalg.inv(um)
-                self.save_button.setEnabled(True)
-                self.project_button.setEnabled(True)
-                self._extrinsic_data.update({"T_lidar_to_cam": {'data': T_lidar_to_cam.tolist()},
-                                             "T_cam_to_img": {'data': um.tolist()},
-                                             "cam_K": {'data': K.tolist()}})
+        output = compute_pnp_transform(self.selected_2d_points,
+                                       self.selected_3d_points,
+                                       self.rgb_camera_matrix, UNIFICATION_MATRIX)
 
-            else:
-                print("Error: Unable to compute transformation.")
-        else:
-            print("Error: Select at least 4 point correspondences.")
+        if output is not None:
+            T_lidar_to_cam, um = output
+            self._extrinsic_data.update({"T_lidar_to_cam": {'data': T_lidar_to_cam.tolist()},
+                                         "T_cam_to_img": {'data': um.tolist()},
+                                         "rgb_K": {'data': self.rgb_camera_matrix.tolist()}})
 
     def closeEvent(self, event):
         """Ensure PyVista process is closed when GUI closes."""

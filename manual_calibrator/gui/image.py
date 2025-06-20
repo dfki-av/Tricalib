@@ -25,12 +25,16 @@ class ImageViewer(QDialog):
         self.image = image
         self.base_image = image.copy()
         self.point_cloud = point_cloud
+        self.retrive_info(extrinsics, intrinsics)
+        self.project()
+        self.initUI()
+
+    def retrive_info(self, extrinsics, intrinsics):
+        self.intrinsics = intrinsics
         lidar2cam = np.array(extrinsics['T_lidar_to_cam']['data'])
         cam2img = np.array(extrinsics['T_cam_to_img']['data'])
         self.ext_mat = lidar2cam@cam2img
         self.intrinsics = intrinsics
-        self.project()
-        self.initUI()
 
     def initUI(self):
         "initialize the GUI."
@@ -179,3 +183,17 @@ class EventImageViewer(QDialog):
             self, "Save Image", "", "Image File (*.jpeg; *.png)")
         if file_path:
             imageio.imwrite(file_path, self.image)
+
+class EventLidarViewer(ImageViewer):
+
+    def __init__(self, image, point_cloud, extrinsics, intrinsics, event_rect_matrix):
+        self.event_rect_matrix = event_rect_matrix
+        super().__init__(image, point_cloud, extrinsics, intrinsics)
+
+    
+    def retrive_info(self, extrinsics, intrinsics):
+        self.intrinsics = intrinsics
+        lidar2cam = np.array(extrinsics['T_lidar_to_evt']['data'])
+        cam2evt = np.array(extrinsics['T_cam_to_evt']['data'])
+        self.ext_mat = lidar2cam@cam2evt
+        self.intrinsics = intrinsics
