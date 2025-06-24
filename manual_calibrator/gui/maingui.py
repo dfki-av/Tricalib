@@ -24,7 +24,7 @@ from PyQt5.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
 # internal imports
 from manual_calibrator.utils.io import write_json, load_json, ucode_icon, fxfycxcy_to_matrix
 from manual_calibrator.utils.projection import normalize_pixels, compute_pnp_transform
-from manual_calibrator.utils.constants import CAMERA4_C2_KMATRIX, UNIFICATION_MATRIX
+from manual_calibrator.utils.constants import UNIFICATION_MATRIX
 from manual_calibrator.gui.image import ImageViewer, EventImageViewer
 from manual_calibrator.gui.secgui import SecondaryWindow
 
@@ -206,7 +206,7 @@ class PrimaryWindow(QMainWindow):
         imageviewer = ImageViewer(self.base_image.copy(),
                                   self.point_cloud,
                                   self._extrinsic_data,
-                                  self.k_matrix)
+                                  self.rgb_camera_matrix)
         imageviewer.exec_()
 
     def project_extrinsics_rgb_ev(self):
