@@ -75,7 +75,7 @@ def project_points(points_3d: np.array,
     return points_2d
 
 
-def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.ndarray):
+def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.ndarray = None):
     """
     Computes a transformation matrix between the lidar sensor and camera sensor.
 

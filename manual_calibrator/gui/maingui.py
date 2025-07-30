@@ -24,8 +24,8 @@ from PyQt5.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
 # internal imports
 from manual_calibrator.utils.io import write_json, load_json, ucode_icon, fxfycxcy_to_matrix
 from manual_calibrator.utils.projection import normalize_pixels, compute_pnp_transform
-from manual_calibrator.utils.constants import UNIFICATION_MATRIX
-from manual_calibrator.gui.image import ImageViewer, EventImageViewer
+from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT
+from manual_calibrator.gui.image import ImageViewer, EventImageViewer, EventLidarViewer
 from manual_calibrator.gui.secgui import SecondaryWindow
 
 
@@ -227,6 +227,14 @@ class PrimaryWindow(QMainWindow):
                                   self.rgb_camera_matrix)
         imageviewer.exec_()
 
+    def project_extrinsics_pc_evt(self):
+
+        imageviewer = EventLidarViewer(self.event_image.copy(),
+                                  self.point_cloud,
+                                  self._extrinsic_data,
+                                  self.evt_camera_matrix, DSEC_R_RECT_EVENT)
+        imageviewer.exec_()
+
     def project_extrinsics_rgb_ev(self):
         imageviewer = EventImageViewer(self.event_image, self.image,
                                        self._extrinsic_data)
@@ -411,8 +419,7 @@ class PrimaryWindow(QMainWindow):
             self, "Save Extrinsics", "", "JSON File (*.json)")
         if file_path:
             data = dict(image_points=self.selected_2d_points,
-                        lidar_points=[i.tolist()
-                                      for i in self.selected_3d_points],
+                        lidar_points=[i for i in self.selected_3d_points],
                         event_points=self.selected_ev_points)
             write_json(file_path, data)
 
@@ -500,7 +507,7 @@ class PrimaryWindow(QMainWindow):
     def compute_pc_evt_transform(self):
         output = compute_pnp_transform(self.selected_ev_points,
                                        self.selected_3d_points,
-                                       self.evt_camera_matrix, UNIFICATION_MATRIX)
+                                       self.evt_camera_matrix)
 
         if output is not None:
             T_lidar_to_evt, um = output
@@ -513,7 +520,7 @@ class PrimaryWindow(QMainWindow):
 
         output = compute_pnp_transform(self.selected_2d_points,
                                        self.selected_3d_points,
-                                       self.rgb_camera_matrix, UNIFICATION_MATRIX)
+                                       self.rgb_camera_matrix)
 
         if output is not None:
             T_lidar_to_cam, um = output
@@ -539,6 +546,7 @@ def run_pyvista_visualizer(cloud, scalar, cmap, conn):
         conn.send(picked_point.tolist())
 
     plotter = pv.Plotter()
+    plotter.add_axes_at_origin()
     plotter.add_mesh(cloud, scalars=scalar, cmap=cmap,
                      point_size=2, render_points_as_spheres=False, pickable=True)
 
