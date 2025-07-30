@@ -138,12 +138,12 @@ class PrimaryWindow(QMainWindow):
         calib_menu.addAction(compute_rgb_ev)
 
         calib_menu.addSeparator()
-        project = QAction(ucode_icon("\U0001F52E"),
+        project_rgb_evt = QAction(ucode_icon("\U0001F52E"),
                           "&Project \U0001F4F7 on \U000026A1", self)
-        project.setStatusTip(
+        project_rgb_evt.setStatusTip(
             "project the RGB on event data using calibration  and visualize")
-        project.triggered.connect(self.project_extrinsics_rgb_ev)
-        calib_menu.addAction(project)
+        project_rgb_evt.triggered.connect(self.project_extrinsics_rgb_ev)
+        calib_menu.addAction(project_rgb_evt)
 
         calib_menu.addSeparator()
 
@@ -155,12 +155,30 @@ class PrimaryWindow(QMainWindow):
         calib_menu.addAction(compute_rgb_pc)
         calib_menu.addSeparator()
 
-        project = QAction(ucode_icon("\U0001F52E"),
+        project_pc_rgb = QAction(ucode_icon("\U0001F52E"),
                           "&Project \U0001F7E2 on \U0001F4F7", self)
-        project.setStatusTip(
+        project_pc_rgb.setStatusTip(
             "project the point cloud on RGB using calibration  and visualize")
-        project.triggered.connect(self.project_extrinsics_pc_rgb)
-        calib_menu.addAction(project)
+        project_pc_rgb.triggered.connect(self.project_extrinsics_pc_rgb)
+        calib_menu.addAction(project_pc_rgb)
+
+        calib_menu.addSeparator()
+
+        compute_evt_pc = QAction(ucode_icon("\U0001F4BB"),
+                                 "&Compute \U000026A1 vs \U0001F7E2", self)
+        compute_evt_pc.setStatusTip(
+            "Compute the Calibration between Event camera and Point Cloud")
+        compute_evt_pc.triggered.connect(self.compute_pc_evt_transform)
+        calib_menu.addAction(compute_evt_pc)
+        calib_menu.addSeparator()
+
+        project_pc_evt = QAction(ucode_icon("\U0001F52E"),
+                          "&Project \U0001F7E2  on \U000026A1", self)
+        project_pc_evt.setStatusTip(
+            "project the point cloud on Event image using calibration and visualize")
+        project_pc_evt.triggered.connect(self.project_extrinsics_pc_evt)
+        calib_menu.addAction(project_pc_evt)
+
 
         pc_menu = menu.addMenu("&Point Cloud")
         intensity = QAction(ucode_icon("\U0001F506"), "&Intensity Mode", self)
