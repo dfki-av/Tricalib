@@ -24,7 +24,7 @@ from PyQt5.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
 # internal imports
 from manual_calibrator.utils.io import write_json, load_json, ucode_icon, fxfycxcy_to_matrix
 from manual_calibrator.utils.projection import normalize_pixels, compute_pnp_transform
-from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT
+from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT, UNIFICATION_MATRIX
 from manual_calibrator.gui.image import ImageViewer, EventImageViewer, EventLidarViewer
 from manual_calibrator.gui.secgui import SecondaryWindow
 
@@ -69,11 +69,6 @@ class PrimaryWindow(QMainWindow):
         load_rgb.setStatusTip("Load an RGB Image from disk")
         load_rgb.triggered.connect(self.load_image)
 
-        load_rgb_k = QAction(ucode_icon("\U0001F4E4"),
-                             "Load R&GB intrinsics", self)
-        load_rgb_k.setStatusTip("Load RGB Camera intrinsic matrix")
-        load_rgb_k.triggered.connect(self.load_intrinsics_rgb)
-
         load_pc = QAction(ucode_icon("\U0001F4E4"),
                           "Load Poi&nt Cloud \U0001F7E2", self)
         load_pc.setStatusTip("Load a point cloud from disk")
@@ -84,10 +79,10 @@ class PrimaryWindow(QMainWindow):
         load_evt.setStatusTip("Load an event image from disk")
         load_evt.triggered.connect(self.load_event_image)
 
-        load_evt_k = QAction(ucode_icon("\U0001F4E4"),
-                             "Load E&vent intrinsics", self)
-        load_evt_k.setStatusTip("Load Event Camera intrinsic matrix")
-        load_evt_k.triggered.connect(self.load_intrinsics_evt)
+        load_k = QAction(ucode_icon("\U0001F4E4"),
+                             "Load &Intrinsics", self)
+        load_k.setStatusTip("Load Event/RGB Camera intrinsic matrix")
+        load_k.triggered.connect(self.load_intrinsics)
 
         load_pts = QAction(ucode_icon("\U0001F4E4"),
                            "Load &Points \U0001F538", self)
@@ -113,13 +108,11 @@ class PrimaryWindow(QMainWindow):
         file_menu = menu.addMenu("&File")
         file_menu.addAction(load_rgb)
         file_menu.addSeparator()
-        file_menu.addAction(load_rgb_k)
-        file_menu.addSeparator()
         file_menu.addAction(load_pc)
         file_menu.addSeparator()
         file_menu.addAction(load_evt)
         file_menu.addSeparator()
-        file_menu.addAction(load_evt_k)
+        file_menu.addAction(load_k)
         file_menu.addSeparator()
         file_menu.addAction(load_pts)
         file_menu.addSeparator()
@@ -340,21 +333,16 @@ class PrimaryWindow(QMainWindow):
         print('Info: Remaining 3D points: ', self.selected_3d_points)
         print('Info: Remaining EV points: ', self.selected_ev_points)
 
-    def load_intrinsics_rgb(self):
+  
+    def load_intrinsics(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Load JSON", "", "JSON File (*.json)")
         if file_path:
-            data = load_json(file_path)
-            self.rgb_camera_matrix = fxfycxcy_to_matrix(
-                data['rgb_camera_intrinsic'])
-
-    def load_intrinsics_evt(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load JSON", "", "JSON File (*.json)")
-        if file_path:
-            data = load_json(file_path)
+            data:dict = load_json(file_path)
             self.evt_camera_matrix = fxfycxcy_to_matrix(
-                data['event_camera_intrinsic'])
+                data.get('event_camera_intrinsic'))
+            self.rgb_camera_matrix = fxfycxcy_to_matrix(
+                data.get('rgb_camera_intrinsic'))
 
     def load_pnp_points(self):
         """GUI button function. Loads the correspondence points saved on the disk"""
@@ -507,7 +495,7 @@ class PrimaryWindow(QMainWindow):
     def compute_pc_evt_transform(self):
         output = compute_pnp_transform(self.selected_ev_points,
                                        self.selected_3d_points,
-                                       self.evt_camera_matrix)
+                                       self.evt_camera_matrix, UNIFICATION_MATRIX)
 
         if output is not None:
             T_lidar_to_evt, um = output
@@ -520,7 +508,7 @@ class PrimaryWindow(QMainWindow):
 
         output = compute_pnp_transform(self.selected_2d_points,
                                        self.selected_3d_points,
-                                       self.rgb_camera_matrix)
+                                       self.rgb_camera_matrix, UNIFICATION_MATRIX)
 
         if output is not None:
             T_lidar_to_cam, um = output
