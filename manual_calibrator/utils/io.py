@@ -40,7 +40,16 @@ def load_point_cloud(file_path: str) -> np.array:
     return np.asarray(pcd.points)
 
 
-def ucode_icon(unicode:str):
+def load_yaml(file_path: str):
+    """
+    loads the data from YAML file.
+    """
+    with open(file_path, 'r') as f:
+        data = yaml.safe_load(f)
+    return data
+
+
+def ucode_icon(unicode: str):
     img = QImage(100, 100, QImage.Format_ARGB32)
     img.fill(Qt.transparent)
 
