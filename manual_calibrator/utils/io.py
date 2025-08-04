@@ -10,6 +10,7 @@ import json
 from typing import Any
 
 # third-party imports
+import yaml
 import numpy as np
 import open3d as o3d
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QIcon, QFont
@@ -28,6 +29,8 @@ def write_json(file_path: str, data: Any) -> None:
     """
     writes the data to a JSON file on disk.
     """
+    if not file_path.endswith('.json'):
+        file_path += '.json'
     with open(file_path, 'w') as f:
         json.dump(data, f, indent=4)
 
