@@ -42,6 +42,20 @@ class ImageViewer(QDialog):
         layout = QVBoxLayout()
 
         h1_layout = QHBoxLayout()
+        h2_layout = QFormLayout()
+        
+
+
+        self.alpha_button = QDoubleSpinBox(self)
+        self.alpha_button.setRange(0.0, 1.0)
+        self.alpha_button.setSingleStep(0.01)
+        self.alpha_button.setDecimals(2)
+        self.alpha_button.setValue(1.0)
+        self.alpha_button.valueChanged.connect(self.on_alpha_changed)
+
+        h2_layout.addRow("Alpha:", self.alpha_button)
+        h1_layout.addLayout(h2_layout)
+
         self.paint_intensity_button = QPushButton("Intensity Mode")
         self.paint_intensity_button.setEnabled(False)
         self.paint_intensity_button.clicked.connect(self.intensity_mode)
@@ -112,8 +126,12 @@ class ImageViewer(QDialog):
         if intensity:
             intensities = self.point_cloud.point.intensity.numpy()
 
+        if hasattr(self, 'alpha_button'):
+            alpha_value = self.alpha_button.value()
+        else:
+            alpha_value = 1.0
         self.image = visualize_projection(
-            self.image, points_3d, points_2d, intensities)
+                self.image, points_3d, points_2d, intensities, alpha_value)
 
     def save_image(self):
         """save image to disk."""
@@ -121,6 +139,18 @@ class ImageViewer(QDialog):
             self, "Save Image", "", "Image File (*.jpeg; *.png)")
         if file_path:
             imageio.imwrite(file_path, self.image)
+    
+    def on_alpha_changed(self, value:float):
+        self.image = self.base_image.copy()
+
+        if self.paint_intensity_button.isEnabled():
+            self.project(intensity=False)
+        else:
+            self.project()
+        self.display_image()
+
+        
+
 
 
 class EventImageViewer(QDialog):
