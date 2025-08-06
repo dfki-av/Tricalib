@@ -3,10 +3,10 @@
 # third-party imports
 import numpy as np
 import imageio.v2 as imageio
-from PyQt5.QtWidgets import (QVBoxLayout, QDialog, QPushButton,
-                             QLabel, QFileDialog, QHBoxLayout)
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap, QImage
+from PyQt6.QtWidgets import (QVBoxLayout, QDialog, QPushButton, QSlider, QFormLayout,
+                             QLabel, QFileDialog, QHBoxLayout, QDoubleSpinBox)
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap, QImage
 
 # internal imports
 from manual_calibrator.utils.projection import project_points, visualize_projection, visualize_rgb_event
@@ -72,9 +72,9 @@ class ImageViewer(QDialog):
         h1_layout.setSpacing(10)
 
         layout.addLayout(h1_layout)
-        # QLabel to display the image
+        # QLabel to display the imaged
         self.image_label = QLabel(self)
-        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.display_image()
         layout.addWidget(self.image_label)
         self.setLayout(layout)
@@ -100,7 +100,7 @@ class ImageViewer(QDialog):
         h, w, ch = self.image.shape
         bytes_per_line = ch * w
         q_image = QImage(self.image.data, w, h,
-                         bytes_per_line, QImage.Format_RGB888)
+                         bytes_per_line, QImage.Format.Format_RGB888)
         self.pixmap = QPixmap.fromImage(q_image)
         self.image_label.setPixmap(self.pixmap)
         self.image_label.setScaledContents(True)
@@ -187,7 +187,7 @@ class EventImageViewer(QDialog):
         layout.addLayout(h1_layout)
         # QLabel to display the image
         self.image_label = QLabel(self)
-        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.display_image()
         layout.addWidget(self.image_label)
         self.setLayout(layout)
@@ -197,14 +197,13 @@ class EventImageViewer(QDialog):
         h, w, ch = self.image.shape
         bytes_per_line = ch * w
         q_image = QImage(self.image.data, w, h,
-                         bytes_per_line, QImage.Format_RGB888)
+                         bytes_per_line, QImage.Format.Format_RGB888)
         self.pixmap = QPixmap.fromImage(q_image)
         self.image_label.setPixmap(self.pixmap)
         self.image_label.setScaledContents(True)
 
     def project(self):
-        """
-        """
+        """Projects the event image onto the RGB image using the extrinsics."""
         self.image = visualize_rgb_event(self.evt_image, self.rgb_image,
                             self.K_evt, self.K_rgb, self.extrinsics)
     def save_image(self):

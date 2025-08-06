@@ -2,5 +2,5 @@ imageio[ffmpeg]
 matplotlib
 open3d
 opencv-python-headless
-PyQt5
+PyQt6
 pyvista

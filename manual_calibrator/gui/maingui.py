@@ -16,10 +16,10 @@ import numpy as np
 import cv2
 import open3d as o3d
 import pyvista as pv
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDialog, QToolBar, QAction,
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDialog, QToolBar, 
                              QPushButton, QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar)
-from PyQt5.QtCore import Qt, QPoint, QTimer, QSize
-from PyQt5.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
+from PyQt6.QtCore import Qt, QPoint, QTimer, QSize
+from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon, QAction
 
 # internal imports
 from manual_calibrator.utils.io import write_json, load_json, ucode_icon, fxfycxcy_to_matrix
@@ -187,8 +187,8 @@ class PrimaryWindow(QMainWindow):
 
         toolbar = QToolBar('ToolBar')
         toolbar.setIconSize(QSize(24, 24))
-        toolbar.setOrientation(Qt.Vertical)
-        self.addToolBar(Qt.LeftToolBarArea, toolbar)
+        toolbar.setOrientation(Qt.Orientation.Vertical)
+        self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, toolbar)
         undo_action = QAction(ucode_icon("\U000021A9"), "undo", self)
         undo_action.setStatusTip(
             "Undoes selection of points across RGB, LiDAR and Event camera")
@@ -196,7 +196,7 @@ class PrimaryWindow(QMainWindow):
         toolbar.addAction(undo_action)
 
         self.image_label = QLabel("2D Image Viewer")
-        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.image_label)
         self.image_label.setMouseTracking(True)
         self.image_label.setStatusTip("2D Image Viewer")
@@ -218,7 +218,7 @@ class PrimaryWindow(QMainWindow):
                                   self.point_cloud,
                                   self._extrinsic_data,
                                   self.rgb_camera_matrix)
-        imageviewer.exec_()
+        imageviewer.exec()
 
     def project_extrinsics_pc_evt(self):
 
@@ -226,22 +226,22 @@ class PrimaryWindow(QMainWindow):
                                   self.point_cloud,
                                   self._extrinsic_data,
                                   self.evt_camera_matrix, DSEC_R_RECT_EVENT)
-        imageviewer.exec_()
+        imageviewer.exec()
 
     def project_extrinsics_rgb_ev(self):
         imageviewer = EventImageViewer(self.event_image, self.image,
                                        self._extrinsic_data)
-        imageviewer.exec_()
+        imageviewer.exec()
 
     def mousePressEvent(self, event):
         """Capture mouse click events in the image viewer."""
-        if event.button() == Qt.RightButton:
+        if event.button() == Qt.MouseButton.RightButton:
             # Get the relative click position in the QLabel
 
-            label_pos = self.image_label.mapFromGlobal(event.globalPos())
+            label_pos = self.image_label.mapFromGlobal(event.globalPosition().toPoint())
             img_x = label_pos.x()
             img_y = label_pos.y()
-            if self.image_label.pixmap():
+            if self.image is not None:
                 pixmap_size = self.image_label.pixmap().size()
                 label_size = self.image_label.size()
 
@@ -336,7 +336,7 @@ class PrimaryWindow(QMainWindow):
   
     def load_intrinsics(self):
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load JSON", "", "JSON File (*.json)")
+            self, "Load Intrinsics", "", "JSON File (*.json)")
         if file_path:
             data:dict = load_json(file_path)
             self.evt_camera_matrix = fxfycxcy_to_matrix(
@@ -347,7 +347,7 @@ class PrimaryWindow(QMainWindow):
     def load_pnp_points(self):
         """GUI button function. Loads the correspondence points saved on the disk"""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load JSON", "", "JSON File (*.json)")
+            self, "Load Pairwise Points", "", "JSON File (*.json)")
         if file_path:
             data = load_json(file_path)
             if 'image_points' in data:
@@ -364,7 +364,7 @@ class PrimaryWindow(QMainWindow):
     def load_extrinsics(self):
         """GUI button function. Loads the extrinsics file stored on the disk."""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load JSON", "", "JSON File (*.json)")
+            self, "Load Extrinsics", "", "JSON File (*.json)")
         if file_path:
             self._extrinsic_data = load_json(file_path)
             self.save_button.setEnabled(True)
@@ -404,7 +404,7 @@ class PrimaryWindow(QMainWindow):
     def save_points(self):
         """GUI button function. Saves the selected points to disk in JSON format."""
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Extrinsics", "", "JSON File (*.json)")
+            self, "Save Pairwise Points", "", "JSON File (*.json)")
         if file_path:
             data = dict(image_points=self.selected_2d_points,
                         lidar_points=[i for i in self.selected_3d_points],
@@ -435,7 +435,7 @@ class PrimaryWindow(QMainWindow):
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         q_image = QImage(rgb_image.data, w, h,
-                         bytes_per_line, QImage.Format_RGB888)
+                         bytes_per_line, QImage.Format.Format_RGB888)
         self.pixmap = QPixmap.fromImage(q_image)
         self.image_label.setPixmap(self.pixmap)
         self.image_label.setScaledContents(True)
@@ -549,7 +549,7 @@ def run_event_data_visualizer(conn, ev_img, ev_img_path):
     sec_wdw.image_label.setStatusTip(os.path.basename(ev_img_path))
     sec_wdw.show()
     sec_wdw.display_image()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main():
@@ -558,7 +558,7 @@ def main():
     locale.setlocale(locale.LC_NUMERIC, 'C')
     main_window = PrimaryWindow()
     main_window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

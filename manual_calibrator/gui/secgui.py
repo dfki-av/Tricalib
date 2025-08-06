@@ -18,10 +18,10 @@ import numpy as np
 import cv2
 import open3d as o3d
 import pyvista as pv
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDialog, QToolBar, QAction,
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDialog, QToolBar,
                              QPushButton, QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar)
-from PyQt5.QtCore import Qt, QPoint, QTimer
-from PyQt5.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
+from PyQt6.QtCore import Qt, QPoint, QTimer
+from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
 
 
 
@@ -45,7 +45,7 @@ class SecondaryWindow(QMainWindow):
         layout = QVBoxLayout()
 
         self.image_label = QLabel("2D Image Viewer")
-        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.image_label)
         self.image_label.setMouseTracking(True)
         central_widget.setLayout(layout)
@@ -60,7 +60,7 @@ class SecondaryWindow(QMainWindow):
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         q_image = QImage(rgb_image.data, w, h,
-                         bytes_per_line, QImage.Format_RGB888)
+                         bytes_per_line, QImage.Format.Format_RGB888)
         self.pixmap = QPixmap.fromImage(q_image)
         self.image_label.setPixmap(self.pixmap)
         self.image_label.setScaledContents(True)
@@ -68,10 +68,10 @@ class SecondaryWindow(QMainWindow):
 
     def mousePressEvent(self, event):
         """Capture mouse click events in the image viewer."""
-        if event.button() == Qt.RightButton:
+        if event.button() == Qt.MouseButton.RightButton:
             # Get the relative click position in the QLabel
 
-            label_pos = self.image_label.mapFromGlobal(event.globalPos())
+            label_pos = self.image_label.mapFromGlobal(event.globalPosition().toPoint())
             img_x = label_pos.x()
             img_y = label_pos.y()
 

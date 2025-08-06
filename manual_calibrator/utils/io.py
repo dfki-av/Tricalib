@@ -13,8 +13,8 @@ from typing import Any
 import yaml
 import numpy as np
 import open3d as o3d
-from PyQt5.QtGui import QPixmap, QImage, QPainter, QIcon, QFont
-from PyQt5.QtCore import Qt
+from PyQt6.QtGui import QPixmap, QImage, QPainter, QIcon, QFont
+from PyQt6.QtCore import Qt
 
 def load_json(file_path: str) -> Any:
     """
@@ -53,13 +53,13 @@ def load_yaml(file_path: str):
 
 
 def ucode_icon(unicode: str):
-    img = QImage(100, 100, QImage.Format_ARGB32)
-    img.fill(Qt.transparent)
+    img = QImage(100, 100, QImage.Format.Format_ARGB32)
+    img.fill(Qt.GlobalColor.transparent)
 
     painter = QPainter(img)
     painter.setFont(QFont("Arial", 48))
-    painter.setPen(Qt.black)
-    painter.drawText(img.rect(), Qt.AlignCenter, unicode)
+    painter.setPen(Qt.GlobalColor.black)
+    painter.drawText(img.rect(), Qt.AlignmentFlag.AlignCenter, unicode)
     painter.end()
 
     pixmap = QPixmap.fromImage(img)
