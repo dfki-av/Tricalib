@@ -4,3 +4,4 @@ open3d
 opencv-python-headless
 PyQt6
 pyvista
+pyyaml
