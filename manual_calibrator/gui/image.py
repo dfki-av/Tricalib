@@ -46,11 +46,10 @@ class ImageViewer(QDialog):
         
 
 
-        self.alpha_button = QDoubleSpinBox(self)
-        self.alpha_button.setRange(0.0, 1.0)
-        self.alpha_button.setSingleStep(0.01)
-        self.alpha_button.setDecimals(2)
-        self.alpha_button.setValue(1.0)
+        self.alpha_button = QSlider(Qt.Orientation.Horizontal, self)
+        self.alpha_button.setRange(0, 100)
+        self.alpha_button.setValue(100)
+        self.alpha_button.setFixedWidth(200)
         self.alpha_button.valueChanged.connect(self.on_alpha_changed)
 
         h2_layout.addRow("Alpha:", self.alpha_button)
@@ -127,7 +126,7 @@ class ImageViewer(QDialog):
             intensities = self.point_cloud.point.intensity.numpy()
 
         if hasattr(self, 'alpha_button'):
-            alpha_value = self.alpha_button.value()
+            alpha_value = self.alpha_button.value()/100
         else:
             alpha_value = 1.0
         self.image = visualize_projection(
