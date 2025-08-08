@@ -37,7 +37,7 @@ class PrimaryWindow(QMainWindow):
         self.setWindowTitle("Manual Calibrator")
 
         self.setGeometry(100, 100, 1200, 800)
-        self.setWindowIcon(QIcon('../../data/icons/start_logo.webp'))
+        self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
 
         # Initialize data structures
         self.image = None

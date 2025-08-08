@@ -6,7 +6,7 @@ import imageio.v2 as imageio
 from PyQt6.QtWidgets import (QVBoxLayout, QDialog, QPushButton, QSlider, QFormLayout,
                              QLabel, QFileDialog, QHBoxLayout, QDoubleSpinBox)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap, QImage
+from PyQt6.QtGui import QPixmap, QImage, QIcon
 
 # internal imports
 from manual_calibrator.utils.projection import project_points, visualize_projection, visualize_rgb_event
@@ -19,6 +19,7 @@ class ImageViewer(QDialog):
         super().__init__()
         self.setWindowTitle("Projection Viewer")
         self.setGeometry(100, 100, 800, 600)
+        self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
 
         # Layout
 

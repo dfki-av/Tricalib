@@ -30,7 +30,8 @@ class SecondaryWindow(QMainWindow):
     def __init__(self, child_connection, ev_img):
         super().__init__()
         self.setWindowTitle("Event Image")
-        self.setGeometry(100, 100, ev_img.shape[1], ev_img.shape[0])
+        self.setGeometry(200, 200, ev_img.shape[1], ev_img.shape[0])
+        self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
 
         self.image = ev_img
         self.conn = child_connection
