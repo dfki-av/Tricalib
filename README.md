@@ -19,6 +19,12 @@ pip install -e .
 ```
 The manual_calibrator should be installed now.
 
+### Usage
+After installation run the following command to launch the GUI.
+```bash
+python -m manual_calibrator
+```
+
 ## Authors and acknowledgment
 Show your appreciation to those who have contributed to the project.
 
