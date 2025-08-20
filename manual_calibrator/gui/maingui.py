@@ -367,8 +367,22 @@ class PrimaryWindow(QMainWindow):
             self, "Load Extrinsics", "", "JSON File (*.json)")
         if file_path:
             self._extrinsic_data = load_json(file_path)
-            self.save_button.setEnabled(True)
-            self.project_button.setEnabled(True)
+            
+            if 'K_evt' not in self._extrinsic_data:
+                try:
+                    self._extrinsic_data['K_evt'] = self.evt_camera_matrix.tolist()
+                except Exception as e:
+                    print(e)
+                    print('Possibly the event camera intrisics are not loaded.')
+                    pass
+            if 'K_rgb' not in self._extrinsic_data:
+                try:
+                    self._extrinsic_data['K_rgb'] = self.rgb_camera_matrix.tolist()
+                except Exception as e:
+                    print(e)
+                    print('Possibly the rgb camera intrinsics are not loaded')
+                    pass
+
 
     def load_image(self):
         """GUI button function. Loads the image from the disk"""
