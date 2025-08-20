@@ -24,7 +24,7 @@ from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon, QAction
 # internal imports
 from manual_calibrator.utils.io import write_json, load_json, ucode_icon, fxfycxcy_to_matrix
 from manual_calibrator.utils.projection import normalize_pixels, compute_pnp_transform
-from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT, UNIFICATION_MATRIX
+from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT, BASIS_MATRIX
 from manual_calibrator.gui.image import ImageViewer, EventImageViewer, EventLidarViewer
 from manual_calibrator.gui.secgui import SecondaryWindow
 
@@ -495,7 +495,7 @@ class PrimaryWindow(QMainWindow):
     def compute_pc_evt_transform(self):
         output = compute_pnp_transform(self.selected_ev_points,
                                        self.selected_3d_points,
-                                       self.evt_camera_matrix, UNIFICATION_MATRIX)
+                                       self.evt_camera_matrix, BASIS_MATRIX)
 
         if output is not None:
             T_lidar_to_evt, um = output

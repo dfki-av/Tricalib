@@ -12,7 +12,7 @@ import numpy as np
 import cv2
 
 # internal imports
-from manual_calibrator.utils.constants import (CAMERA4_C2_DISTORTION, CAMERA4_C2_KMATRIX, UNIFICATION_MATRIX,
+from manual_calibrator.utils.constants import (CAMERA4_C2_DISTORTION, CAMERA4_C2_KMATRIX, BASIS_MATRIX,
                                                DSEC_R_RECT_EVENT, DSEC_R_RECT_RGB, DSEC_T_GT)
 
 
@@ -58,12 +58,15 @@ def project_points(points_3d: np.array,
     """
 
     # Apply the rotation and translation to the 3D points
+
+    if unification:
+        rotation_matrix = rotation_matrix@BASIS_MATRIX
+
     transformed_points = np.dot(
         rotation_matrix, points_3d.T).T + translation_vector
 
     # If required project to original camera co-ordinate system.
-    if unification:
-        transformed_points = np.dot(UNIFICATION_MATRIX, transformed_points.T).T
+
     # Project points to 2D using the camera intrinsic matrix
     points_2d = np.dot(camera_matrix, transformed_points.T).T
 
