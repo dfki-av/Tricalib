@@ -16,6 +16,7 @@ import open3d as o3d
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QIcon, QFont
 from PyQt6.QtCore import Qt
 
+
 def load_json(file_path: str) -> Any:
     """
     loads the data from JSON file.
@@ -73,3 +74,13 @@ def fxfycxcy_to_matrix(_4e_fmt):
         matrix[:2, 2] = _4e_fmt[2:]
         return matrix
     return _4e_fmt
+
+
+def serialize_dict(data: dict) -> dict:
+    """
+    serializes the data with numpy arrays to save to JSON file.
+    """
+    for k in data:
+        if hasattr(data[k], 'tolist'):
+            data[k] = data[k].tolist()
+    return data
