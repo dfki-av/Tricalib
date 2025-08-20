@@ -486,16 +486,16 @@ class PrimaryWindow(QMainWindow):
                 points_rgb, self.rgb_camera_matrix)
             points_evt_norm = normalize_pixels(
                 points_evt, self.evt_camera_matrix)
-            E, _ = cv2.findEssentialMat(
-                points_rgb_norm, points_evt_norm, method=cv2.RANSAC, prob=0.999, threshold=1.0)
-            E = E[:3, :]
+            E, mask = cv2.findEssentialMat(
+                points_rgb_norm, points_evt_norm, method=cv2.RANSAC, prob=0.999, threshold=1e-3, maxIters=10000)
+    
             out = cv2.recoverPose(
-                E=E, points1=points_rgb_norm, points2=points_evt_norm,)
+                E=E, points1=points_rgb_norm, points2=points_evt_norm, mask=mask)
             T_rgb_evt = np.eye(4)
             T_rgb_evt[:3, :3] = out[1]
             T_rgb_evt[:3, 3] = out[2].flatten()
 
-            rgb_evt_T_data = dict(T_rgb_evt=dict(data=T_rgb_evt.tolist()),
+            rgb_evt_T_data = dict(T_rgb_to_evt=dict(data=T_rgb_evt.tolist()),
                                   K_evt=dict(
                                       data=self.evt_camera_matrix.tolist()),
                                   K_rgb=dict(data=self.rgb_camera_matrix.tolist()))
