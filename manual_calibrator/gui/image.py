@@ -104,13 +104,13 @@ class ImageViewer(QDialog):
         self.image_label.setPixmap(self.pixmap)
         self.image_label.setScaledContents(True)
 
-    def project(self, unification=False, intensity=True):
+    def project(self, unification=True, intensity=True):
         """
         projects the point cloud on to image plane and updates the image in GUI.
 
         Parameters:
         -----------
-        unification: deprecated, doesn't reflect in GUI.
+        unification: axis alignment for lidar and rgb/event sensor
         intensity: whether to colorise the projected points with intensity or depth. when intensity False, depth.
         """
         points_3d = self.point_cloud.point.positions.numpy()
