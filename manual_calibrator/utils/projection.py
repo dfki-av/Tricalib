@@ -61,7 +61,7 @@ def project_points(points_3d: np.array,
 
     if unification:
         rotation_matrix = rotation_matrix@BASIS_MATRIX
-
+    
     transformed_points = np.dot(
         rotation_matrix, points_3d.T).T + translation_vector
 
@@ -77,6 +77,38 @@ def project_points(points_3d: np.array,
 
     return points_2d
 
+
+def project_rgb_to_event(points_rgb, K_rgb, K_ev, extrinsics):
+    """
+    Projects 2D points from the RGB image to the event image.
+
+    Parameters:
+    -----------
+    points_rgb: (N, 2) array of 2D points in the RGB image.
+    K_rgb: (3, 3) intrinsic matrix of the RGB camera.
+    K_ev: (3, 3) intrinsic matrix of the event camera.
+    extrinsics: (4, 4) transformation matrix from event to RGB.
+
+    Returns:
+    --------
+    points_event: (N, 2) array of projected 2D points in the event image.
+    """
+    # Adjust extrinsics to match the convention in visualize_rgb_event
+    extrinsics = DSEC_R_RECT_RGB @ extrinsics @ np.linalg.inv(DSEC_R_RECT_EVENT)
+    R = extrinsics[:3, :3]
+
+    # Compute the inverse projection matrix
+    proj_matrix = np.linalg.inv(K_rgb @ R @ np.linalg.inv(K_ev))
+
+    # Convert points to homogeneous coordinates
+    points_rgb_hom = np.hstack([points_rgb, np.ones((points_rgb.shape[0], 1))])
+
+    # Map points to event image coordinates
+    points_event_hom = (proj_matrix @ points_rgb_hom.T).T
+
+    # Normalize
+    points_event = points_event_hom[:, :2] / points_event_hom[:, 2, None]
+    return points_event
 
 def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.ndarray = None):
     """
