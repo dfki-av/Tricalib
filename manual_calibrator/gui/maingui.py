@@ -499,22 +499,22 @@ class PrimaryWindow(QMainWindow):
 
         if output is not None:
             T_lidar_to_evt, um = output
-            self._extrinsic_data.update({"T_lidar_to_evt": {'data': T_lidar_to_evt.tolist()},
-                                        "T_cam_to_evt": {'data': um.tolist()},
-                                         "evt_K": {'data': self.evt_camera_matrix.tolist()}})
+            self._extrinsic_data.update({"T_lidar_to_evt":  T_lidar_to_evt.tolist(),
+                                        "T_evt_to_img": um.tolist(),
+                                         "K_evt": self.evt_camera_matrix.tolist()})
 
     def compute_pc_rgb_transform(self):
         """Computes the transformation matrix from the selected correspondences."""
 
         output = compute_pnp_transform(self.selected_2d_points,
                                        self.selected_3d_points,
-                                       self.rgb_camera_matrix, UNIFICATION_MATRIX)
+                                       self.rgb_camera_matrix, BASIS_MATRIX)
 
         if output is not None:
             T_lidar_to_cam, um = output
-            self._extrinsic_data.update({"T_lidar_to_cam": {'data': T_lidar_to_cam.tolist()},
-                                         "T_cam_to_img": {'data': um.tolist()},
-                                         "rgb_K": {'data': self.rgb_camera_matrix.tolist()}})
+            self._extrinsic_data.update({"T_lidar_to_rgb":T_lidar_to_cam.tolist(),
+                                         "T_rgb_to_img":  um.tolist(),
+                                         "K_rgb": self.rgb_camera_matrix.tolist()})
 
     def closeEvent(self, event):
         """Ensure PyVista process is closed when GUI closes."""

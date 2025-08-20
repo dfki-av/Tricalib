@@ -32,9 +32,8 @@ class ImageViewer(QDialog):
 
     def retrive_info(self, extrinsics, intrinsics):
         self.intrinsics = intrinsics
-        lidar2cam = np.array(extrinsics['T_lidar_to_cam']['data'])
-        cam2img = np.array(extrinsics['T_cam_to_img']['data'])
-        self.ext_mat = lidar2cam@cam2img
+        lidar2cam = np.array(extrinsics['T_lidar_to_rgb'])
+        self.ext_mat = lidar2cam
         self.intrinsics = intrinsics
 
     def initUI(self):
@@ -165,9 +164,9 @@ class EventImageViewer(QDialog):
 
         self.evt_image = evt_image
         self.rgb_image = rgb_image
-        self.extrinsics = np.array(extrinsics_data['T_rgb_evt']['data'])
-        self.K_evt = np.array(extrinsics_data["K_evt"]['data'])
-        self.K_rgb = np.array(extrinsics_data['K_rgb']['data'])
+        self.extrinsics = np.array(extrinsics_data['T_rgb_to_evt'])
+        self.K_evt = np.array(extrinsics_data["K_evt"])
+        self.K_rgb = np.array(extrinsics_data['K_rgb'])
     
         self.project()
         self.initUI()
@@ -222,7 +221,6 @@ class EventLidarViewer(ImageViewer):
     
     def retrive_info(self, extrinsics, intrinsics):
         self.intrinsics = intrinsics
-        lidar2cam = np.array(extrinsics['T_lidar_to_evt']['data'])
-        cam2evt = np.array(extrinsics['T_cam_to_evt']['data'])
-        self.ext_mat = lidar2cam@cam2evt
+        lidar2cam = np.array(extrinsics['T_lidar_to_evt'])
+        self.ext_mat = lidar2cam
         self.intrinsics = intrinsics
