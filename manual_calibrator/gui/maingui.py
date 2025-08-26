@@ -16,7 +16,7 @@ import numpy as np
 import cv2
 import open3d as o3d
 import pyvista as pv
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDialog, QToolBar, 
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDialog, QToolBar, QToolButton, QSizePolicy,
                              QPushButton, QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar)
 from PyQt6.QtCore import Qt, QPoint, QTimer, QSize
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon, QAction
@@ -27,6 +27,7 @@ from manual_calibrator.utils.projection import normalize_pixels, compute_pnp_tra
 from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT, BASIS_MATRIX
 from manual_calibrator.gui.image import ImageViewer, EventImageViewer, EventLidarViewer
 from manual_calibrator.gui.secgui import SecondaryWindow
+from manual_calibrator.gui.style import Switch
 
 
 class PrimaryWindow(QMainWindow):
@@ -40,6 +41,7 @@ class PrimaryWindow(QMainWindow):
         self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
 
         # Initialize data structures
+        self.auto_axis_alignment = True
         self.image = None
         self.point_cloud = None
         self.selected_2d_points = []
@@ -80,7 +82,7 @@ class PrimaryWindow(QMainWindow):
         load_evt.triggered.connect(self.load_event_image)
 
         load_k = QAction(ucode_icon("\U0001F4E4"),
-                             "Load &Intrinsics", self)
+                         "Load &Intrinsics", self)
         load_k.setStatusTip("Load Event/RGB Camera intrinsic matrix")
         load_k.triggered.connect(self.load_intrinsics)
 
@@ -132,7 +134,7 @@ class PrimaryWindow(QMainWindow):
 
         calib_menu.addSeparator()
         project_rgb_evt = QAction(ucode_icon("\U0001F52E"),
-                          "&Project \U0001F4F7 on \U000026A1", self)
+                                  "&Project \U0001F4F7 on \U000026A1", self)
         project_rgb_evt.setStatusTip(
             "project the RGB on event data using calibration  and visualize")
         project_rgb_evt.triggered.connect(self.project_extrinsics_rgb_ev)
@@ -149,7 +151,7 @@ class PrimaryWindow(QMainWindow):
         calib_menu.addSeparator()
 
         project_pc_rgb = QAction(ucode_icon("\U0001F52E"),
-                          "&Project \U0001F7E2 on \U0001F4F7", self)
+                                 "&Project \U0001F7E2 on \U0001F4F7", self)
         project_pc_rgb.setStatusTip(
             "project the point cloud on RGB using calibration  and visualize")
         project_pc_rgb.triggered.connect(self.project_extrinsics_pc_rgb)
@@ -166,12 +168,11 @@ class PrimaryWindow(QMainWindow):
         calib_menu.addSeparator()
 
         project_pc_evt = QAction(ucode_icon("\U0001F52E"),
-                          "&Project \U0001F7E2  on \U000026A1", self)
+                                 "&Project \U0001F7E2  on \U000026A1", self)
         project_pc_evt.setStatusTip(
             "project the point cloud on Event image using calibration and visualize")
         project_pc_evt.triggered.connect(self.project_extrinsics_pc_evt)
         calib_menu.addAction(project_pc_evt)
-
 
         pc_menu = menu.addMenu("&Point Cloud")
         intensity = QAction(ucode_icon("\U0001F506"), "&Intensity Mode", self)
@@ -189,11 +190,37 @@ class PrimaryWindow(QMainWindow):
         toolbar.setIconSize(QSize(24, 24))
         toolbar.setOrientation(Qt.Orientation.Vertical)
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, toolbar)
-        undo_action = QAction(ucode_icon("\U000021A9"), "undo", self)
+        undo_action = QAction(self.style().standardIcon(
+            self.style().StandardPixmap.SP_ArrowBack), "Undo", self)
         undo_action.setStatusTip(
             "Undoes selection of points across RGB, LiDAR and Event camera")
         undo_action.triggered.connect(self.undo)
         toolbar.addAction(undo_action)
+
+        horiz_toolbar = QToolBar("Hoizon Toolbar")
+        horiz_toolbar.setIconSize(QSize(24, 24))
+        horiz_toolbar.setOrientation(Qt.Orientation.Horizontal)
+        self.addToolBar(horiz_toolbar)
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding,
+                             QSizePolicy.Policy.Preferred)
+        horiz_toolbar.addWidget(spacer)
+
+        container = QWidget()
+        toolbar_layout = QHBoxLayout(container)
+        toolbar_layout.setContentsMargins(0, 0, 0, 0)
+        toolbar_layout.setSpacing(6)
+
+        axis_label = QLabel("Auto Axis Alignment:")
+
+        self.switch = Switch()
+        self.switch.setChecked(True)
+        self.switch.stateChanged.connect(self.toggle_unification)
+        self.switch.setStatusTip(
+            "When enabled, the co-ordinate system of lidar and rgb/event camera sensor are auto-aligned.")
+        toolbar_layout.addWidget(axis_label)
+        toolbar_layout.addWidget(self.switch)
+        horiz_toolbar.addWidget(container)
 
         self.image_label = QLabel("2D Image Viewer")
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -217,15 +244,15 @@ class PrimaryWindow(QMainWindow):
         imageviewer = ImageViewer(self.base_image.copy(),
                                   self.point_cloud,
                                   self._extrinsic_data,
-                                  self.rgb_camera_matrix)
+                                  self.rgb_camera_matrix, self.auto_axis_alignment)
         imageviewer.exec()
 
     def project_extrinsics_pc_evt(self):
 
         imageviewer = EventLidarViewer(self.event_image.copy(),
-                                  self.point_cloud,
-                                  self._extrinsic_data,
-                                  self.evt_camera_matrix, DSEC_R_RECT_EVENT)
+                                       self.point_cloud,
+                                       self._extrinsic_data,
+                                       self.evt_camera_matrix, self.auto_axis_alignment, DSEC_R_RECT_EVENT)
         imageviewer.exec()
 
     def project_extrinsics_rgb_ev(self):
@@ -238,7 +265,8 @@ class PrimaryWindow(QMainWindow):
         if event.button() == Qt.MouseButton.RightButton:
             # Get the relative click position in the QLabel
 
-            label_pos = self.image_label.mapFromGlobal(event.globalPosition().toPoint())
+            label_pos = self.image_label.mapFromGlobal(
+                event.globalPosition().toPoint())
             img_x = label_pos.x()
             img_y = label_pos.y()
             if self.image is not None:
@@ -333,12 +361,17 @@ class PrimaryWindow(QMainWindow):
         print('Info: Remaining 3D points: ', self.selected_3d_points)
         print('Info: Remaining EV points: ', self.selected_ev_points)
 
-  
+    def toggle_unification(self, state):
+        if state == Qt.CheckState.Checked.value:
+            self.auto_axis_alignment = True
+        else:
+            self.auto_axis_alignment = False
+
     def load_intrinsics(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Load Intrinsics", "", "JSON File (*.json)")
         if file_path:
-            data:dict = load_json(file_path)
+            data: dict = load_json(file_path)
             self.evt_camera_matrix = fxfycxcy_to_matrix(
                 data.get('event_camera_intrinsic'))
             self.rgb_camera_matrix = fxfycxcy_to_matrix(
@@ -367,22 +400,24 @@ class PrimaryWindow(QMainWindow):
             self, "Load Extrinsics", "", "JSON File (*.json)")
         if file_path:
             self._extrinsic_data = load_json(file_path)
-            
+
             if 'K_evt' not in self._extrinsic_data:
                 try:
-                    self._extrinsic_data['K_evt'] = self.evt_camera_matrix.tolist()
+                    self._extrinsic_data['K_evt'] = self.evt_camera_matrix.tolist(
+                    )
                 except Exception as e:
                     print(e)
                     print('Possibly the event camera intrisics are not loaded.')
                     pass
             if 'K_rgb' not in self._extrinsic_data:
                 try:
-                    self._extrinsic_data['K_rgb'] = self.rgb_camera_matrix.tolist()
+                    self._extrinsic_data['K_rgb'] = self.rgb_camera_matrix.tolist(
+                    )
                 except Exception as e:
                     print(e)
                     print('Possibly the rgb camera intrinsics are not loaded')
                     pass
-
+            self.switch.setEnabled(False)
 
     def load_image(self):
         """GUI button function. Loads the image from the disk"""
@@ -488,7 +523,7 @@ class PrimaryWindow(QMainWindow):
                 points_evt, self.evt_camera_matrix)
             E, mask = cv2.findEssentialMat(
                 points_rgb_norm, points_evt_norm, method=cv2.RANSAC, prob=0.999, threshold=1e-3, maxIters=10000)
-    
+
             out = cv2.recoverPose(
                 E=E, points1=points_rgb_norm, points2=points_evt_norm, mask=mask)
             T_rgb_evt = np.eye(4)
@@ -516,6 +551,7 @@ class PrimaryWindow(QMainWindow):
             self._extrinsic_data.update({"T_lidar_to_evt":  T_lidar_to_evt.tolist(),
                                         "T_evt_to_img": um.tolist(),
                                          "K_evt": self.evt_camera_matrix.tolist()})
+            self.switch.setEnabled(False)
 
     def compute_pc_rgb_transform(self):
         """Computes the transformation matrix from the selected correspondences."""
@@ -526,9 +562,10 @@ class PrimaryWindow(QMainWindow):
 
         if output is not None:
             T_lidar_to_cam, um = output
-            self._extrinsic_data.update({"T_lidar_to_rgb":T_lidar_to_cam.tolist(),
+            self._extrinsic_data.update({"T_lidar_to_rgb": T_lidar_to_cam.tolist(),
                                          "T_rgb_to_img":  um.tolist(),
                                          "K_rgb": self.rgb_camera_matrix.tolist()})
+            self.switch.setEnabled(False)
 
     def closeEvent(self, event):
         """Ensure PyVista process is closed when GUI closes."""

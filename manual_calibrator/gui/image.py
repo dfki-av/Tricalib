@@ -15,7 +15,7 @@ from manual_calibrator.utils.projection import project_points, visualize_project
 class ImageViewer(QDialog):
     """Secondary window for displaying the image."""
 
-    def __init__(self, image, point_cloud, extrinsics, intrinsics):
+    def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment):
         super().__init__()
         self.setWindowTitle("Projection Viewer")
         self.setGeometry(100, 100, 800, 600)
@@ -26,6 +26,7 @@ class ImageViewer(QDialog):
         self.image = image
         self.base_image = image.copy()
         self.point_cloud = point_cloud
+        self.axis_alignment = axis_alignment
         self.retrive_info(extrinsics, intrinsics)
         self.project()
         self.initUI()
@@ -104,7 +105,7 @@ class ImageViewer(QDialog):
         self.image_label.setPixmap(self.pixmap)
         self.image_label.setScaledContents(True)
 
-    def project(self, unification=True, intensity=True):
+    def project(self, intensity=True):
         """
         projects the point cloud on to image plane and updates the image in GUI.
 
@@ -121,7 +122,7 @@ class ImageViewer(QDialog):
                                    rotation_matrix=r_mat,
                                    translation_vector=t_vec,
                                    camera_matrix=self.intrinsics,
-                                   unification=unification)
+                                   unification=self.axis_alignment)
         if intensity:
             intensities = self.point_cloud.point.intensity.numpy()
 
@@ -214,9 +215,9 @@ class EventImageViewer(QDialog):
 
 class EventLidarViewer(ImageViewer):
 
-    def __init__(self, image, point_cloud, extrinsics, intrinsics, event_rect_matrix):
+    def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment, event_rect_matrix):
         self.event_rect_matrix = event_rect_matrix
-        super().__init__(image, point_cloud, extrinsics, intrinsics)
+        super().__init__(image, point_cloud, extrinsics, intrinsics, axis_alignment)
 
     
     def retrive_info(self, extrinsics, intrinsics):
