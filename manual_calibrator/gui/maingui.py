@@ -241,24 +241,35 @@ class PrimaryWindow(QMainWindow):
 
     def project_extrinsics_pc_rgb(self):
         """GUI button function.Opens another windows displaying the projected pointcloud on image."""
-        imageviewer = ImageViewer(self.base_image.copy(),
-                                  self.point_cloud,
-                                  self._extrinsic_data,
-                                  self.rgb_camera_matrix, self.auto_axis_alignment)
-        imageviewer.exec()
+
+        process = mp.Process(target=launch_projection_window,
+                             kwargs=dict(window=ImageViewer, image=self.base_image.copy(),
+                                         point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
+                                         intrinsics=self.rgb_camera_matrix, axis_alignment=self.auto_axis_alignment))
+
+        self.pv_processes.append(process)
+        process.start()
 
     def project_extrinsics_pc_evt(self):
+        process = mp.Process(target=launch_projection_window,
+                             kwargs=dict(window=EventLidarViewer, image=self.event_image,
+                                         point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
+                                         intrinsics=self.evt_camera_matrix, axis_alignment=self.auto_axis_alignment,
+                                         event_rect_matrix=DSEC_R_RECT_EVENT
+                                         ))
 
-        imageviewer = EventLidarViewer(self.event_image.copy(),
-                                       self.point_cloud,
-                                       self._extrinsic_data,
-                                       self.evt_camera_matrix, self.auto_axis_alignment, DSEC_R_RECT_EVENT)
-        imageviewer.exec()
+        self.pv_processes.append(process)
+        process.start()
 
     def project_extrinsics_rgb_ev(self):
-        imageviewer = EventImageViewer(self.event_image, self.image,
-                                       self._extrinsic_data)
-        imageviewer.exec()
+
+        process = mp.Process(target=launch_projection_window,
+                             kwargs=dict(window=EventImageViewer, evt_image=self.event_image,
+                                         rgb_image=self.image, extrinsics_data=self._extrinsic_data
+                                         ))
+
+        self.pv_processes.append(process)
+        process.start()
 
     def mousePressEvent(self, event):
         """Capture mouse click events in the image viewer."""
@@ -600,6 +611,14 @@ def run_event_data_visualizer(conn, ev_img, ev_img_path):
     sec_wdw.image_label.setStatusTip(os.path.basename(ev_img_path))
     sec_wdw.show()
     sec_wdw.display_image()
+    sys.exit(app.exec())
+
+
+def launch_projection_window(**kwargs):
+    app = QApplication([])
+    window = kwargs.pop('window')
+    proj_wdw = window(**kwargs)
+    proj_wdw.show()
     sys.exit(app.exec())
 
 
