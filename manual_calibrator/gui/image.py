@@ -3,7 +3,7 @@
 # third-party imports
 import numpy as np
 import imageio.v2 as imageio
-from PyQt6.QtWidgets import (QVBoxLayout, QDialog, QPushButton, QSlider, QFormLayout,
+from PyQt6.QtWidgets import (QVBoxLayout, QDialog, QPushButton, QSlider, QFormLayout, QMainWindow, QWidget,
                              QLabel, QFileDialog, QHBoxLayout, QDoubleSpinBox)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QImage, QIcon
@@ -12,7 +12,7 @@ from PyQt6.QtGui import QPixmap, QImage, QIcon
 from manual_calibrator.utils.projection import project_points, visualize_projection, visualize_rgb_event
 
 
-class ImageViewer(QDialog):
+class ImageViewer(QMainWindow):
     """Secondary window for displaying the image."""
 
     def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment):
@@ -21,8 +21,7 @@ class ImageViewer(QDialog):
         self.setGeometry(100, 100, 800, 600)
         self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
 
-        # Layout
-
+        # Data setup
         self.image = image
         self.base_image = image.copy()
         self.point_cloud = point_cloud
@@ -38,14 +37,17 @@ class ImageViewer(QDialog):
         self.intrinsics = intrinsics
 
     def initUI(self):
-        "initialize the GUI."
+        """Initialize the GUI."""
 
-        layout = QVBoxLayout()
+        # ---- Central widget required for QMainWindow ----
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
 
+        layout = QVBoxLayout(central_widget)
+
+        # Top controls
         h1_layout = QHBoxLayout()
         h2_layout = QFormLayout()
-        
-
 
         self.alpha_button = QSlider(Qt.Orientation.Horizontal, self)
         self.alpha_button.setRange(0, 100)
@@ -72,12 +74,12 @@ class ImageViewer(QDialog):
         h1_layout.setSpacing(10)
 
         layout.addLayout(h1_layout)
-        # QLabel to display the imaged
+
+        # QLabel to display the image
         self.image_label = QLabel(self)
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.display_image()
         layout.addWidget(self.image_label)
-        self.setLayout(layout)
 
     def depth_mode(self):
         """Displays the projection with points colorized with depth."""
@@ -96,7 +98,7 @@ class ImageViewer(QDialog):
         self.paint_intensity_button.setEnabled(False)
 
     def display_image(self):
-        """displays the image in GUI"""
+        """Displays the image in GUI."""
         h, w, ch = self.image.shape
         bytes_per_line = ch * w
         q_image = QImage(self.image.data, w, h,
@@ -106,14 +108,7 @@ class ImageViewer(QDialog):
         self.image_label.setScaledContents(True)
 
     def project(self, intensity=True):
-        """
-        projects the point cloud on to image plane and updates the image in GUI.
-
-        Parameters:
-        -----------
-        unification: axis alignment for lidar and rgb/event sensor
-        intensity: whether to colorise the projected points with intensity or depth. when intensity False, depth.
-        """
+        """Projects the point cloud onto image plane and updates the image."""
         points_3d = self.point_cloud.point.positions.numpy()
         intensities = None
         r_mat = self.ext_mat[:3, :3]
@@ -127,33 +122,32 @@ class ImageViewer(QDialog):
             intensities = self.point_cloud.point.intensity.numpy()
 
         if hasattr(self, 'alpha_button'):
-            alpha_value = self.alpha_button.value()/100
+            alpha_value = self.alpha_button.value() / 100
         else:
             alpha_value = 1.0
         self.image = visualize_projection(
-                self.image, points_3d, points_2d, intensities, alpha_value)
+            self.image, points_3d, points_2d, intensities, alpha_value)
 
     def save_image(self):
-        """save image to disk."""
+        """Save image to disk."""
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Save Image", "", "Image File (*.jpeg; *.png)")
         if file_path:
             imageio.imwrite(file_path, self.image)
-    
-    def on_alpha_changed(self, value:float):
-        self.image = self.base_image.copy()
 
+    def on_alpha_changed(self, value: float):
+        self.image = self.base_image.copy()
         if self.paint_intensity_button.isEnabled():
             self.project(intensity=False)
         else:
             self.project()
         self.display_image()
 
+
         
 
 
-
-class EventImageViewer(QDialog):
+class EventImageViewer(QMainWindow):
     """Secondary window for displaying the image."""
 
     def __init__(self, evt_image, rgb_image, extrinsics_data):
@@ -161,39 +155,43 @@ class EventImageViewer(QDialog):
         self.setWindowTitle("Event Projection Viewer")
         self.setGeometry(100, 100, 800, 600)
 
-        # Layout
-
+        # Data setup
         self.evt_image = evt_image
         self.rgb_image = rgb_image
         self.extrinsics = np.array(extrinsics_data['T_rgb_to_evt'])
         self.K_evt = np.array(extrinsics_data["K_evt"])
         self.K_rgb = np.array(extrinsics_data['K_rgb'])
-    
+
         self.project()
         self.initUI()
 
     def initUI(self):
-        "initialize the GUI."
+        """Initialize the GUI."""
 
-        layout = QVBoxLayout()
+        # ---- Central widget required for QMainWindow ----
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
 
+        layout = QVBoxLayout(central_widget)
+
+        # Top controls
         h1_layout = QHBoxLayout()
-    
+
         self.save_button = QPushButton("Save Projection")
         self.save_button.clicked.connect(self.save_image)
         h1_layout.addWidget(self.save_button)
         h1_layout.setSpacing(10)
 
         layout.addLayout(h1_layout)
+
         # QLabel to display the image
         self.image_label = QLabel(self)
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.display_image()
         layout.addWidget(self.image_label)
-        self.setLayout(layout)
 
     def display_image(self):
-        """displays the image in GUI"""
+        """Displays the image in GUI."""
         h, w, ch = self.image.shape
         bytes_per_line = ch * w
         q_image = QImage(self.image.data, w, h,
@@ -205,13 +203,15 @@ class EventImageViewer(QDialog):
     def project(self):
         """Projects the event image onto the RGB image using the extrinsics."""
         self.image = visualize_rgb_event(self.evt_image, self.rgb_image,
-                            self.K_evt, self.K_rgb, self.extrinsics)
+                                         self.K_evt, self.K_rgb, self.extrinsics)
+
     def save_image(self):
-        """save image to disk."""
+        """Save image to disk."""
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Save Image", "", "Image File (*.jpeg; *.png)")
         if file_path:
             imageio.imwrite(file_path, self.image)
+
 
 class EventLidarViewer(ImageViewer):
 
