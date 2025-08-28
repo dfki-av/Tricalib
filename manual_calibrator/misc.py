@@ -15,14 +15,14 @@ from scipy.spatial.transform import Rotation as R
 # internal imports
 
 
-def normalize_quat(q: np.array) -> np.array:
+def normalize_quat(q: np.ndarray) -> np.ndarray:
     """
     Normalizes the provided quaternion (from scipy. [x, y, z, w])
     """
     return q/np.linalg.norm(q)
 
 
-def quat_to_matrix(q: np.array) -> np.array:
+def quat_to_matrix(q: np.ndarray) -> np.ndarray:
     """
     Normalizes the quaternion and converts into a matrix.
     """
@@ -32,7 +32,7 @@ def quat_to_matrix(q: np.array) -> np.array:
     return R.from_quat(q_normalized).as_matrix()
 
 
-def compose_T(R: np.array, t: np.array) -> np.array:
+def compose_T(R: np.ndarray, t: np.ndarray) -> np.ndarray:
     """
     Composes the rotation matrix (3x3) and translation vector (3,) into a Transformation matrix (4x4)
 
@@ -48,7 +48,7 @@ def compose_T(R: np.array, t: np.array) -> np.array:
     return T
 
 
-def decompose_T(T: np.array) -> tuple[np.array]:
+def decompose_T(T: np.ndarray) -> tuple[np.ndarray]:
     """
     Decomposes T(4x4) Transformation matrix into Rotation matrix(3x3) and translation vector(3,)
 

@@ -22,12 +22,14 @@ from PyQt6.QtCore import Qt, QPoint, QTimer, QSize
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon, QAction
 
 # internal imports
-from manual_calibrator.utils.io import write_json, load_json, ucode_icon, fxfycxcy_to_matrix
+from manual_calibrator.utils.io import (write_json, load_json, ucode_icon,
+                                        fxfycxcy_to_matrix, serialize_dict)
 from manual_calibrator.utils.projection import normalize_pixels, compute_pnp_transform
 from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT, BASIS_MATRIX
 from manual_calibrator.gui.image import ImageViewer, EventImageViewer, EventLidarViewer
 from manual_calibrator.gui.secgui import SecondaryWindow
 from manual_calibrator.gui.style import Switch
+from manual_calibrator.optim.optimizer import optimize_calibration
 
 
 class PrimaryWindow(QMainWindow):
@@ -125,8 +127,23 @@ class PrimaryWindow(QMainWindow):
         file_menu.addAction(save_calib)
 
         calib_menu = menu.addMenu("&Calibration")
+
+        compute_all = QAction(ucode_icon("\U0001F4BB"), "Compute all", self)
+        compute_all.setStatusTip(
+            "Compute the Calibration among all modalities simultaneously.")
+        compute_all.triggered.connect(self.compute_all)
+        calib_menu.addAction(compute_all)
+        calib_menu.addSeparator()
+
+        project_all = QAction(ucode_icon("\U0001F52E"), "Project all", self)
+        project_all.setStatusTip(
+            "Projects all the modalities using calcualted calibration.")
+        project_all.triggered.connect(self.project_all)
+        calib_menu.addAction(project_all)
+        calib_menu.addSeparator()
+
         compute_rgb_ev = QAction(ucode_icon("\U0001F4BB"),
-                                 "&Compute \U0001F4F7 vs. \U000026A1", self)
+                                 "Compute \U0001F4F7 vs. \U000026A1", self)
         compute_rgb_ev.setStatusTip(
             "Compute the Calibration between RGB and Event camera")
         compute_rgb_ev.triggered.connect(self.compute_evt_rgb_transform)
@@ -134,7 +151,7 @@ class PrimaryWindow(QMainWindow):
 
         calib_menu.addSeparator()
         project_rgb_evt = QAction(ucode_icon("\U0001F52E"),
-                                  "&Project \U0001F4F7 on \U000026A1", self)
+                                  "Project \U0001F4F7 on \U000026A1", self)
         project_rgb_evt.setStatusTip(
             "project the RGB on event data using calibration  and visualize")
         project_rgb_evt.triggered.connect(self.project_extrinsics_rgb_ev)
@@ -143,7 +160,7 @@ class PrimaryWindow(QMainWindow):
         calib_menu.addSeparator()
 
         compute_rgb_pc = QAction(ucode_icon("\U0001F4BB"),
-                                 "&Compute \U0001F4F7 vs. \U0001F7E2", self)
+                                 "Compute \U0001F4F7 vs. \U0001F7E2", self)
         compute_rgb_pc.setStatusTip(
             "Compute the Calibration between RGB and Point Cloud")
         compute_rgb_pc.triggered.connect(self.compute_pc_rgb_transform)
@@ -151,7 +168,7 @@ class PrimaryWindow(QMainWindow):
         calib_menu.addSeparator()
 
         project_pc_rgb = QAction(ucode_icon("\U0001F52E"),
-                                 "&Project \U0001F7E2 on \U0001F4F7", self)
+                                 "Project \U0001F7E2 on \U0001F4F7", self)
         project_pc_rgb.setStatusTip(
             "project the point cloud on RGB using calibration  and visualize")
         project_pc_rgb.triggered.connect(self.project_extrinsics_pc_rgb)
@@ -239,6 +256,12 @@ class PrimaryWindow(QMainWindow):
         abs_url = os.path.abspath(url)
         webbrowser.open(f"file://{abs_url}")
 
+    def project_all(self):
+        """GUI button function. Opens multiple windows dispalying the projected images of all modalities."""
+        self.project_extrinsics_pc_evt()
+        self.project_extrinsics_pc_rgb()
+        self.project_extrinsics_rgb_ev()
+
     def project_extrinsics_pc_rgb(self):
         """GUI button function.Opens another windows displaying the projected pointcloud on image."""
 
@@ -265,8 +288,8 @@ class PrimaryWindow(QMainWindow):
 
         process = mp.Process(target=launch_projection_window,
                              kwargs=dict(window=EventImageViewer, evt_image=self.event_image,
-                                         rgb_image=self.image, extrinsics_data=self._extrinsic_data
-                                         ))
+                                         rgb_image=self.image, extrinsics_data=self._extrinsic_data,
+                                         K_evt=self.evt_camera_matrix, K_rgb=self.rgb_camera_matrix))
 
         self.pv_processes.append(process)
         process.start()
@@ -541,11 +564,9 @@ class PrimaryWindow(QMainWindow):
             T_rgb_evt[:3, :3] = out[1]
             T_rgb_evt[:3, 3] = out[2].flatten()
 
-            rgb_evt_T_data = dict(T_rgb_to_evt=dict(data=T_rgb_evt.tolist()),
-                                  K_evt=dict(
-                                      data=self.evt_camera_matrix.tolist()),
-                                  K_rgb=dict(data=self.rgb_camera_matrix.tolist()))
-
+            rgb_evt_T_data = dict(T_rgb_to_evt=T_rgb_evt)
+            rgb_evt_T_data = serialize_dict(rgb_evt_T_data)
+        
             self._extrinsic_data.update(rgb_evt_T_data)
             print('RGB to Event Transformation Matrix:')
             print(T_rgb_evt)
@@ -558,10 +579,9 @@ class PrimaryWindow(QMainWindow):
                                        self.evt_camera_matrix, BASIS_MATRIX)
 
         if output is not None:
-            T_lidar_to_evt, um = output
-            self._extrinsic_data.update({"T_lidar_to_evt":  T_lidar_to_evt.tolist(),
-                                        "T_evt_to_img": um.tolist(),
-                                         "K_evt": self.evt_camera_matrix.tolist()})
+            T_lidar_to_evt, _ = output
+            evt_lidar_T_data = serialize_dict(dict(T_lidar_to_evt=T_lidar_to_evt))
+            self._extrinsic_data.update(evt_lidar_T_data)
             self.switch.setEnabled(False)
 
     def compute_pc_rgb_transform(self):
@@ -572,12 +592,18 @@ class PrimaryWindow(QMainWindow):
                                        self.rgb_camera_matrix, BASIS_MATRIX)
 
         if output is not None:
-            T_lidar_to_cam, um = output
-            self._extrinsic_data.update({"T_lidar_to_rgb": T_lidar_to_cam.tolist(),
-                                         "T_rgb_to_img":  um.tolist(),
-                                         "K_rgb": self.rgb_camera_matrix.tolist()})
+            T_lidar_to_cam, _ = output
+            rgb_lidar_T_data = serialize_dict({"T_lidar_to_rgb": T_lidar_to_cam})
+            self._extrinsic_data.update(rgb_lidar_T_data)
             self.switch.setEnabled(False)
 
+    def compute_all(self):
+        """Computes the transfromation matrices of all the modalities simultaneoulsy."""
+        extrinsics = optimize_calibration(points_lidar=self.selected_3d_points,
+                             points_rgb=self.selected_2d_points,
+                             points_event=self.selected_ev_points,
+                             K_rgb=self.rgb_camera_matrix, K_ev=self.evt_camera_matrix)
+        self._extrinsic_data = serialize_dict(extrinsics)
     def closeEvent(self, event):
         """Ensure PyVista process is closed when GUI closes."""
 

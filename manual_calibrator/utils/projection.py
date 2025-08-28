@@ -21,7 +21,7 @@ def undistort_fisheye(image, return_newk=False):
     undistorts the image assuming fisheye lens.
     Parameters:
     ----------
-    image: np.array
+    image: np.ndarray
     returns: undistored image (np.array)
     """
     dist = np.array([CAMERA4_C2_DISTORTION['k1'],
@@ -42,10 +42,10 @@ def undistort_fisheye(image, return_newk=False):
     return undistort_image
 
 
-def project_points(points_3d: np.array,
-                   rotation_matrix: np.array,
-                   translation_vector: np.array,
-                   camera_matrix: np.array, unification=False) -> np.array:
+def project_points(points_3d: np.ndarray,
+                   rotation_matrix: np.ndarray,
+                   translation_vector: np.ndarray,
+                   camera_matrix: np.ndarray, unification=False) -> np.ndarray:
     """
     Projects the 3D points in LiDAR to image plane.
 
@@ -148,9 +148,9 @@ def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.nda
     return None
 
 
-def visualize_projection(image: np.array, points_3d: np.array,
-                         points_2d: np.array, intensities: Optional[np.array] = None, alpha: float = 0.5,
-                         color_map: int = cv2.COLORMAP_JET) -> np.array:
+def visualize_projection(image: np.ndarray, points_3d: np.ndarray,
+                         points_2d: np.ndarray, intensities: Optional[np.ndarray] = None, alpha: float = 0.5,
+                         color_map: int = cv2.COLORMAP_JET) -> np.ndarray:
     """
     visualizes the projection of point cloud using depth or intensity information.
     basically points are colored using this information.

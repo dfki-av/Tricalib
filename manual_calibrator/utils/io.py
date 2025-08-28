@@ -36,7 +36,7 @@ def write_json(file_path: str, data: Any) -> None:
         json.dump(data, f, indent=4)
 
 
-def load_point_cloud(file_path: str) -> np.array:
+def load_point_cloud(file_path: str) -> np.ndarray:
     """
     loads the PCD point cloud from the disk.
     """

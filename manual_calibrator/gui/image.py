@@ -135,7 +135,7 @@ class ImageViewer(QMainWindow):
         if file_path:
             imageio.imwrite(file_path, self.image)
 
-    def on_alpha_changed(self, value: float):
+    def on_alpha_changed(self):
         self.image = self.base_image.copy()
         if self.paint_intensity_button.isEnabled():
             self.project(intensity=False)
@@ -150,7 +150,7 @@ class ImageViewer(QMainWindow):
 class EventImageViewer(QMainWindow):
     """Secondary window for displaying the image."""
 
-    def __init__(self, evt_image, rgb_image, extrinsics_data):
+    def __init__(self, evt_image, rgb_image, extrinsics_data, K_evt, K_rgb):
         super().__init__()
         self.setWindowTitle("Event Projection Viewer")
         self.setGeometry(100, 100, 800, 600)
@@ -159,8 +159,8 @@ class EventImageViewer(QMainWindow):
         self.evt_image = evt_image
         self.rgb_image = rgb_image
         self.extrinsics = np.array(extrinsics_data['T_rgb_to_evt'])
-        self.K_evt = np.array(extrinsics_data["K_evt"])
-        self.K_rgb = np.array(extrinsics_data['K_rgb'])
+        self.K_evt = K_evt
+        self.K_rgb = K_rgb
 
         self.project()
         self.initUI()

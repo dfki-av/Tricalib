@@ -19,7 +19,7 @@ from manual_calibrator.utils.projection import project_points, project_rgb_to_ev
 from manual_calibrator.misc import compose_T, quat_to_matrix
 
 
-def parameters_to_matrices(params: np.array) -> dict:
+def parameters_to_matrices(params: np.ndarray) -> dict:
     """
     Converts the parameters (quaternion form) to matrices and provides a dict of transfromations.
     params: (14/21,) shaped array containing the parameters from the optimizer output
@@ -52,9 +52,9 @@ def parameters_to_matrices(params: np.array) -> dict:
     return out
 
 
-def reprojection_error(params: np.array, points_lidar: list, points_rgb: list, points_event: list,
+def reprojection_error(params: np.ndarray, points_lidar: list, points_rgb: list, points_event: list,
                        K_rgb: list, K_ev: list, lidar2rgb: dict = None,
-                       lidar2evt: dict = None, rgb2event: dict = None) -> np.array:
+                       lidar2evt: dict = None, rgb2event: dict = None) -> np.ndarray:
     """
     Computes the reprojection error for the given parameters.
 
@@ -141,7 +141,7 @@ def reprojection_error(params: np.array, points_lidar: list, points_rgb: list, p
 
 
 def optimize_calibration(points_lidar: list, points_rgb: list, points_event: list,
-                         K_rgb: list | np.array, K_ev: list | np.array, params: np.array = None,
+                         K_rgb: list | np.ndarray, K_ev: list | np.ndarray, params: np.ndarray = None,
                          lidar2rgb: dict = None, lidar2evt: dict = None, rgb2evt: dict = None) -> dict:
     """
     Optimize the calibration parameters using least squares.
