@@ -21,7 +21,7 @@ dependency_links = [x.strip().replace('git+', '') for x in all_reqs if x.startsw
 # Call the setup.py
 setup(
     name='manual_calibrator',
-    version=0.2,
+    version=0.3,
     author='Rahul Jakkamsetty',
     license='internal',
     packages=find_packages(exclude=['docs', 'libs', 'test*', 'examples', 'debug', 'data']),
