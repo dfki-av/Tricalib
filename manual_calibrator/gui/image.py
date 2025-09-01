@@ -9,6 +9,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QImage, QIcon
 
 # internal imports
+from manual_calibrator.utils.constants import DSEC_R_RECT_RGB
 from manual_calibrator.utils.projection import project_points, visualize_projection, visualize_rgb_event
 
 
@@ -113,11 +114,16 @@ class ImageViewer(QMainWindow):
         intensities = None
         r_mat = self.ext_mat[:3, :3]
         t_vec = self.ext_mat[:3, 3]
+        if hasattr(self, 'event_rect_matrix'):
+            rectification_matrix = self.event_rect_matrix
+        else:
+            rectification_matrix = DSEC_R_RECT_RGB
         points_2d = project_points(points_3d=points_3d,
                                    rotation_matrix=r_mat,
                                    translation_vector=t_vec,
                                    camera_matrix=self.intrinsics,
-                                   unification=self.axis_alignment)
+                                   unification=self.axis_alignment,
+                                   rectification_matrix=rectification_matrix)
         if intensity:
             intensities = self.point_cloud.point.intensity.numpy()
 
@@ -142,9 +148,6 @@ class ImageViewer(QMainWindow):
         else:
             self.project()
         self.display_image()
-
-
-        
 
 
 class EventImageViewer(QMainWindow):
@@ -219,7 +222,6 @@ class EventLidarViewer(ImageViewer):
         self.event_rect_matrix = event_rect_matrix
         super().__init__(image, point_cloud, extrinsics, intrinsics, axis_alignment)
 
-    
     def retrive_info(self, extrinsics, intrinsics):
         self.intrinsics = intrinsics
         lidar2cam = np.array(extrinsics['T_lidar_to_evt'])
