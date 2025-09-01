@@ -11,6 +11,7 @@ Developed at DFKI in JULY-AUGUST 2025.
 # third-party imports
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+from PyQt6.QtGui import QPixmap, QImage
 
 # internal imports
 
@@ -54,3 +55,12 @@ def decompose_T(T: np.ndarray) -> tuple[np.ndarray]:
 
     """
     return T[:3, :3], T[:3, 3]
+
+
+def image_to_pixmap(img: np.ndarray):
+        h, w, ch = img.shape
+        bytes_per_line = ch * w
+        q_image = QImage(img.data, w, h, bytes_per_line,
+                         QImage.Format.Format_RGB888)
+        pixmap = QPixmap.fromImage(q_image)
+        return pixmap

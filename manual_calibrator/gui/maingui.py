@@ -30,6 +30,9 @@ from manual_calibrator.gui.image import ImageViewer, EventImageViewer, EventLida
 from manual_calibrator.gui.secgui import SecondaryWindow
 from manual_calibrator.gui.style import Switch
 from manual_calibrator.optim.optimizer import optimize_calibration
+from manual_calibrator.misc import image_to_pixmap
+
+
 
 
 class PrimaryWindow(QMainWindow):
@@ -51,7 +54,6 @@ class PrimaryWindow(QMainWindow):
         self.selected_ev_points = []
         self._extrinsic_data = dict()
         self.base_image = None
-        self.image_backups = []
         self.parent_conn_lidar, self.child_conn_lidar = mp.Pipe()
         self.parent_conn_event, self.child_conn_event = mp.Pipe()
         self.pv_processes = []
@@ -323,7 +325,6 @@ class PrimaryWindow(QMainWindow):
                 if 0 <= img_x < pixmap_width and 0 <= img_y < pixmap_height:
                     print(f"Exact image pixel coordinates: ({img_x}, {img_y})")
                     self.selected_2d_points.append((img_x, img_y))
-                    self.image_backups.append(self.pixmap.copy())
                     self.draw_circle(QPoint(img_x, img_y),
                                      len(self.selected_2d_points)-1)
 
@@ -380,9 +381,8 @@ class PrimaryWindow(QMainWindow):
 
         if self.selected_2d_points:
             self.selected_2d_points.pop()
-            img = self.image_backups.pop()
-            self.image_label.setPixmap(img)
-            self.pixmap = img
+            self.draw_points_on_image(self.selected_2d_points,self.base_image)
+            self.image_label.setPixmap(self.pixmap)
 
         if self.selected_3d_points:
             self.selected_3d_points.pop()
@@ -420,8 +420,7 @@ class PrimaryWindow(QMainWindow):
             if 'image_points' in data:
                 self.selected_2d_points.extend(data['image_points'])
                 if hasattr(self, 'pixmap'):
-                    for i, point in enumerate(self.selected_2d_points):
-                        self.draw_circle(QPoint(*point), i)
+                     self.draw_points_on_image(self.selected_2d_points)
             if 'lidar_points' in data:
                 self.selected_3d_points.extend(data['lidar_points'])
             if 'event_points' in data:
@@ -515,14 +514,17 @@ class PrimaryWindow(QMainWindow):
         # Convert the image for PyQt display
         rgb_image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
         self.base_image = rgb_image.copy()
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        q_image = QImage(rgb_image.data, w, h,
-                         bytes_per_line, QImage.Format.Format_RGB888)
-        self.pixmap = QPixmap.fromImage(q_image)
+        self.pixmap = image_to_pixmap(rgb_image)
         self.image_label.setPixmap(self.pixmap)
         self.image_label.setScaledContents(True)
-
+    
+    def draw_points_on_image(self, points: list, rgb_image: np.ndarray | None = None):
+        if rgb_image is not None:
+            self.pixmap = image_to_pixmap(rgb_image)
+        for idx, point in enumerate(points):
+            q_point = QPoint(point[0], point[1])
+            self.draw_circle(q_point, idx)
+    
     def start_ev_timer(self):
         """starts the pyqt timer"""
         self.ev_timer = QTimer(self)

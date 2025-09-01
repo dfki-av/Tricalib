@@ -5,28 +5,23 @@ __doc__ = """
 """
 
 # python imports
-import sys
-import os
-import locale
-import multiprocessing as mp
-import webbrowser
-from threading import Thread
+
 
 # third-party imports
-import comm
 import numpy as np
 import cv2
-import open3d as o3d
-import pyvista as pv
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDialog, QToolBar,
                              QPushButton, QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar)
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
 
+# internal imports
+from manual_calibrator.misc import image_to_pixmap
 
 
 class SecondaryWindow(QMainWindow):
     """Secondary Window allocated to visualized Event Data"""
+
     def __init__(self, child_connection, ev_img):
         super().__init__()
         self.setWindowTitle("Event Image")
@@ -34,12 +29,11 @@ class SecondaryWindow(QMainWindow):
         self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
 
         self.image = ev_img
+        self.base_image = ev_img.copy()
         self.conn = child_connection
         self.initUI()
         self.selected_2d_points = []
-        self.image_backups = []
- 
-        
+
     def initUI(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -52,32 +46,34 @@ class SecondaryWindow(QMainWindow):
         central_widget.setLayout(layout)
         self.setStatusBar(QStatusBar(self))
 
-        
     def display_image(self):
         """Function to display the image once the image is loaded."""
         # Convert the image for PyQt display
         rgb_image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
         self.base_image = rgb_image.copy()
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        q_image = QImage(rgb_image.data, w, h,
-                         bytes_per_line, QImage.Format.Format_RGB888)
-        self.pixmap = QPixmap.fromImage(q_image)
+        self.pixmap = image_to_pixmap(rgb_image)
         self.image_label.setPixmap(self.pixmap)
         self.image_label.setScaledContents(True)
         self.start_timer()
+
+    def draw_points_on_image(self, points: list, rgb_image: np.ndarray | None = None):
+        if rgb_image is not None:
+            self.pixmap = image_to_pixmap(rgb_image)
+        for idx, point in enumerate(points):
+            q_point = QPoint(point[0], point[1])
+            self.draw_circle(q_point, idx)
 
     def mousePressEvent(self, event):
         """Capture mouse click events in the image viewer."""
         if event.button() == Qt.MouseButton.RightButton:
             # Get the relative click position in the QLabel
 
-            label_pos = self.image_label.mapFromGlobal(event.globalPosition().toPoint())
+            label_pos = self.image_label.mapFromGlobal(
+                event.globalPosition().toPoint())
             img_x = label_pos.x()
             img_y = label_pos.y()
 
             pixmap_size = self.image_label.pixmap().size()
-
 
             label_size = self.image_label.size()
 
@@ -134,9 +130,8 @@ class SecondaryWindow(QMainWindow):
     def undo(self):
         if self.selected_2d_points:
             self.selected_2d_points.pop()
-            img = self.image_backups.pop()
-            self.image_label.setPixmap(img)
-            self.pixmap = img
+            self.draw_points_on_image(self.selected_2d_points, self.base_image)
+
     def start_timer(self):
         self.undo_timer = QTimer(self)
         self.undo_timer.timeout.connect(self.undo_poll)
