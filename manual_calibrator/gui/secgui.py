@@ -94,7 +94,6 @@ class SecondaryWindow(QMainWindow):
                     point = (img_x, img_y)
                     self.selected_2d_points.append(point)
                     self.conn.send(point)
-                    self.image_backups.append(self.pixmap.copy())
                     self.draw_circle(QPoint(*point),
                                      len(self.selected_2d_points)-1)
 
