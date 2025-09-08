@@ -348,7 +348,7 @@ class PrimaryWindow(QMainWindow):
         painter.setPen(pen)
         radius = 5
 
-        brush = QColor("red")
+        brush = QColor(0, 0, 0, 0)
         painter.setBrush(brush)
         painter.drawEllipse(position, radius, radius)
         text_offset = position + QPoint(radius+1, -(radius+1))

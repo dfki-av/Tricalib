@@ -117,7 +117,7 @@ class SecondaryWindow(QMainWindow):
         painter.setPen(pen)
         radius = 3
 
-        brush = QColor("yellow")
+        brush = QColor(255, 255, 0, 127)
         painter.setBrush(brush)
         painter.drawEllipse(position, radius, radius)
         text_offset = position + QPoint(radius+1, -(radius+1))
