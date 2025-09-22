@@ -105,7 +105,7 @@ def reprojection_error(params: np.ndarray, points_lidar: list, points_rgb: list,
 
     # Project points from LiDAR to RGB
     points_lidar_projected_to_rgb = project_points(
-        points_lidar_rgb, R_lidar_rgb, tvec_rgb, K_rgb, unification=True, rectification_matrix=DSEC_R_RECT_RGB)
+        points_lidar_rgb, R_lidar_rgb, tvec_rgb, K_rgb, unification=True, rectification_matrix=DSEC_R_RECT_RGB.T)
 
     if rgb2event is not None:
         points_rgb_event = np.array(points_rgb+rgb2event['image_points'])
@@ -127,7 +127,7 @@ def reprojection_error(params: np.ndarray, points_lidar: list, points_rgb: list,
         points_event_for_lidar = np.array(points_event)
 
     points_lidar_projected_to_event = project_points(
-        points_lidar_evt, R_lidar_ev, tvec_ev, K_ev, unification=True, rectification_matrix=DSEC_R_RECT_EVENT)
+        points_lidar_evt, R_lidar_ev, tvec_ev, K_ev, unification=True, rectification_matrix=DSEC_R_RECT_EVENT.T)
 
     # Compute the reprojection error
 

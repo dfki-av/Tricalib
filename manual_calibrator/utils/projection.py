@@ -45,7 +45,8 @@ def undistort_fisheye(image, return_newk=False):
 def project_points(points_3d: np.ndarray,
                    rotation_matrix: np.ndarray,
                    translation_vector: np.ndarray,
-                   camera_matrix: np.ndarray, unification=False, rectification_matrix=None) -> np.ndarray:
+                   camera_matrix: np.ndarray, unification: bool = False,
+                   rectification_matrix: np.ndarray | None = None) -> np.ndarray:
     """
     Projects the 3D points in LiDAR to image plane.
 
@@ -61,14 +62,14 @@ def project_points(points_3d: np.ndarray,
 
     if unification:
         rotation_matrix = rotation_matrix@BASIS_MATRIX
-    
+
     if rectification_matrix is None:
         rectification_matrix = np.eye(3)
-    
-    rotation_matrix = rotation_matrix@rectification_matrix[:3, :3].T
-    
+
+    rotation_matrix = rotation_matrix@rectification_matrix
+
     transformed_points = np.dot(
-        rotation_matrix, points_3d.T).T + translation_vector 
+        rotation_matrix, points_3d.T).T + translation_vector
     # If required project to original camera co-ordinate system.
 
     # Project points to 2D using the camera intrinsic matrix
@@ -98,7 +99,13 @@ def project_rgb_to_event(points_rgb, K_rgb, K_ev, extrinsics):
     points_event: (N, 2) array of projected 2D points in the event image.
     """
     # Adjust extrinsics to match the convention in visualize_rgb_event
-    extrinsics = DSEC_R_RECT_RGB @ extrinsics @ np.linalg.inv(DSEC_R_RECT_EVENT)
+    r_rect_rgb = np.eye(4)
+    r_rect_rgb[:3, :3] = DSEC_R_RECT_RGB
+    r_rect_evt = np.eye(4)
+    r_rect_evt[:3, :3] = DSEC_R_RECT_EVENT
+
+    extrinsics = r_rect_rgb @ extrinsics @ np.linalg.inv(
+        r_rect_evt)
     R = extrinsics[:3, :3]
 
     # Compute the inverse projection matrix
@@ -114,7 +121,8 @@ def project_rgb_to_event(points_rgb, K_rgb, K_ev, extrinsics):
     points_event = points_event_hom[:, :2] / points_event_hom[:, 2, None]
     return points_event
 
-def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.ndarray = None):
+
+def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.ndarray = None, rect_mat: np.ndarray = None):
     """
     Computes a transformation matrix between the lidar sensor and camera sensor.
 
@@ -134,12 +142,16 @@ def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.nda
         success, rvec, tvec = cv2.solvePnP(points_3d, points_2d, K, None)
 
         if success:
+            if rect_mat is None:
+                rect_mat = np.eye(3)
+
             R, _ = cv2.Rodrigues(rvec)
             T = np.eye(4)
-            T[:3, :3] = R
+            T[:3, :3] = R@rect_mat
             T[:3, 3] = tvec.flatten()
             print("Extrinsic Transformation Matrix:")
             print(T)
+
             if len(U) == 3:
                 um = np.eye(4)
                 um[:3, :3] = U
@@ -191,22 +203,28 @@ def visualize_projection(image: np.ndarray, points_3d: np.ndarray,
     return image
 
 
-def normalize_pixels(points, K):
+def normalize_pixels(points, K, R_rect=None):
     """
     pixel coordinates --> normalized coordinates using Intrinsic matrix.
     """
     pts_hom = np.hstack((points, np.ones((points.shape[0], 1))))
-    pts_norm = (np.linalg.inv(K)@pts_hom.T).T
+    if R_rect is None:
+        R_rect = np.eye(3)
+    pts_norm = (R_rect@np.linalg.inv(K)@pts_hom.T).T
     return pts_norm[:, :2]
 
 
 def visualize_rgb_event(evt_img, rgb_img, K_ev, K_rgb, extrinsics):
 
     # extrinsics = DSEC_T_GT
+    r_rect_rgb = np.eye(4)
+    r_rect_rgb[:3, :3] = DSEC_R_RECT_RGB
+    r_rect_evt = np.eye(4)
+    r_rect_evt[:3, :3] = DSEC_R_RECT_EVENT
 
-    extrinsics = DSEC_R_RECT_RGB@extrinsics@np.linalg.inv(DSEC_R_RECT_EVENT)
-    print('Final Transformation Used:')
-    print(extrinsics)
+    extrinsics = r_rect_rgb@extrinsics@np.linalg.inv(r_rect_evt)
+    #print('Final Transformation Used:')
+    #print(extrinsics)
     R = extrinsics[:3, :3]
     proj_matrix = K_rgb @ R @ np.linalg.inv(K_ev)
     ht, wd, _ = evt_img.shape

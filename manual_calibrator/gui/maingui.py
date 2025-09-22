@@ -25,7 +25,7 @@ from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon, QAction
 from manual_calibrator.utils.io import (write_json, load_json, ucode_icon,
                                         fxfycxcy_to_matrix, serialize_dict)
 from manual_calibrator.utils.projection import normalize_pixels, compute_pnp_transform
-from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT, BASIS_MATRIX
+from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT, BASIS_MATRIX, DSEC_R_RECT_RGB
 from manual_calibrator.gui.image import ImageViewer, EventImageViewer, EventLidarViewer
 from manual_calibrator.gui.secgui import SecondaryWindow
 from manual_calibrator.gui.style import Switch
@@ -270,7 +270,8 @@ class PrimaryWindow(QMainWindow):
         process = mp.Process(target=launch_projection_window,
                              kwargs=dict(window=ImageViewer, image=self.base_image.copy(),
                                          point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
-                                         intrinsics=self.rgb_camera_matrix, axis_alignment=self.auto_axis_alignment))
+                                         intrinsics=self.rgb_camera_matrix, axis_alignment=self.auto_axis_alignment,
+                                         rect_matrix=DSEC_R_RECT_RGB))
 
         self.pv_processes.append(process)
         process.start()
@@ -280,7 +281,7 @@ class PrimaryWindow(QMainWindow):
                              kwargs=dict(window=EventLidarViewer, image=self.event_image,
                                          point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
                                          intrinsics=self.evt_camera_matrix, axis_alignment=self.auto_axis_alignment,
-                                         event_rect_matrix=DSEC_R_RECT_EVENT
+                                         rect_matrix=DSEC_R_RECT_EVENT
                                          ))
 
         self.pv_processes.append(process)
@@ -578,7 +579,7 @@ class PrimaryWindow(QMainWindow):
     def compute_pc_evt_transform(self):
         output = compute_pnp_transform(self.selected_ev_points,
                                        self.selected_3d_points,
-                                       self.evt_camera_matrix, BASIS_MATRIX)
+                                       self.evt_camera_matrix, BASIS_MATRIX, DSEC_R_RECT_EVENT)
 
         if output is not None:
             T_lidar_to_evt, _ = output
@@ -591,7 +592,7 @@ class PrimaryWindow(QMainWindow):
 
         output = compute_pnp_transform(self.selected_2d_points,
                                        self.selected_3d_points,
-                                       self.rgb_camera_matrix, BASIS_MATRIX)
+                                       self.rgb_camera_matrix, BASIS_MATRIX, DSEC_R_RECT_RGB)
 
         if output is not None:
             T_lidar_to_cam, _ = output

@@ -16,7 +16,7 @@ from manual_calibrator.utils.projection import project_points, visualize_project
 class ImageViewer(QMainWindow):
     """Secondary window for displaying the image."""
 
-    def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment):
+    def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment, rect_matrix):
         super().__init__()
         self.setWindowTitle("Projection Viewer")
         self.setGeometry(100, 100, 800, 600)
@@ -27,9 +27,11 @@ class ImageViewer(QMainWindow):
         self.base_image = image.copy()
         self.point_cloud = point_cloud
         self.axis_alignment = axis_alignment
+        self.rect_matrix = rect_matrix[:3, :3].T
         self.retrive_info(extrinsics, intrinsics)
         self.project()
         self.initUI()
+
 
     def retrive_info(self, extrinsics, intrinsics):
         self.intrinsics = intrinsics
@@ -114,16 +116,13 @@ class ImageViewer(QMainWindow):
         intensities = None
         r_mat = self.ext_mat[:3, :3]
         t_vec = self.ext_mat[:3, 3]
-        if hasattr(self, 'event_rect_matrix'):
-            rectification_matrix = self.event_rect_matrix
-        else:
-            rectification_matrix = DSEC_R_RECT_RGB
+    
         points_2d = project_points(points_3d=points_3d,
                                    rotation_matrix=r_mat,
                                    translation_vector=t_vec,
                                    camera_matrix=self.intrinsics,
                                    unification=self.axis_alignment,
-                                   rectification_matrix=rectification_matrix)
+                                   rectification_matrix=self.rect_matrix)
         if intensity:
             intensities = self.point_cloud.point.intensity.numpy()
 
@@ -218,9 +217,8 @@ class EventImageViewer(QMainWindow):
 
 class EventLidarViewer(ImageViewer):
 
-    def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment, event_rect_matrix):
-        self.event_rect_matrix = event_rect_matrix
-        super().__init__(image, point_cloud, extrinsics, intrinsics, axis_alignment)
+    def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment, rect_matrix):
+        super().__init__(image, point_cloud, extrinsics, intrinsics, axis_alignment, rect_matrix)
 
     def retrive_info(self, extrinsics, intrinsics):
         self.intrinsics = intrinsics
