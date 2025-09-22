@@ -83,7 +83,7 @@ def project_points(points_3d: np.ndarray,
     return points_2d
 
 
-def project_rgb_to_event(points_rgb, K_rgb, K_ev, extrinsics):
+def project_rgb_to_event(points_rgb, K_rgb, K_ev, extrinsics, rect_matrices):
     """
     Projects 2D points from the RGB image to the event image.
 
@@ -99,10 +99,12 @@ def project_rgb_to_event(points_rgb, K_rgb, K_ev, extrinsics):
     points_event: (N, 2) array of projected 2D points in the event image.
     """
     # Adjust extrinsics to match the convention in visualize_rgb_event
+    if rect_matrices is None:
+        rect_matrices = dict(rgb=np.eye(3), event=np.eye(3))
     r_rect_rgb = np.eye(4)
-    r_rect_rgb[:3, :3] = DSEC_R_RECT_RGB
+    r_rect_rgb[:3, :3] = rect_matrices['rgb']
     r_rect_evt = np.eye(4)
-    r_rect_evt[:3, :3] = DSEC_R_RECT_EVENT
+    r_rect_evt[:3, :3] = rect_matrices['event']
 
     extrinsics = r_rect_rgb @ extrinsics @ np.linalg.inv(
         r_rect_evt)
@@ -144,6 +146,8 @@ def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.nda
         if success:
             if rect_mat is None:
                 rect_mat = np.eye(3)
+            if U is None:
+                U = np.eye(3)
 
             R, _ = cv2.Rodrigues(rvec)
             T = np.eye(4)
@@ -152,13 +156,12 @@ def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.nda
             print("Extrinsic Transformation Matrix:")
             print(T)
 
-            if len(U) == 3:
-                um = np.eye(4)
-                um[:3, :3] = U
-                T_lidar_to_cam = T@np.linalg.inv(um)
-                return T_lidar_to_cam, um
-            else:
-                print("Error: Unable to compute transformation.")
+            um = np.eye(4)
+            um[:3, :3] = U
+            T_lidar_to_cam = T@np.linalg.inv(um)
+            return T_lidar_to_cam, um
+        else:
+            print("Error: Unable to compute transformation.")
     else:
         print("Error: Select at least 4 point correspondences.")
     return None
@@ -214,17 +217,20 @@ def normalize_pixels(points, K, R_rect=None):
     return pts_norm[:, :2]
 
 
-def visualize_rgb_event(evt_img, rgb_img, K_ev, K_rgb, extrinsics):
+def visualize_rgb_event(evt_img, rgb_img, K_ev, K_rgb, extrinsics, rect_matrices=None):
+
+    if rect_matrices is None:
+        rect_matrices = dict(rgb=np.eye(3), event=np.eye(3))
 
     # extrinsics = DSEC_T_GT
     r_rect_rgb = np.eye(4)
-    r_rect_rgb[:3, :3] = DSEC_R_RECT_RGB
+    r_rect_rgb[:3, :3] = rect_matrices['rgb']
     r_rect_evt = np.eye(4)
-    r_rect_evt[:3, :3] = DSEC_R_RECT_EVENT
+    r_rect_evt[:3, :3] = rect_matrices['event']
 
     extrinsics = r_rect_rgb@extrinsics@np.linalg.inv(r_rect_evt)
-    #print('Final Transformation Used:')
-    #print(extrinsics)
+    # print('Final Transformation Used:')
+    # print(extrinsics)
     R = extrinsics[:3, :3]
     proj_matrix = K_rgb @ R @ np.linalg.inv(K_ev)
     ht, wd, _ = evt_img.shape

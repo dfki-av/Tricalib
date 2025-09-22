@@ -33,8 +33,6 @@ from manual_calibrator.optim.optimizer import optimize_calibration
 from manual_calibrator.misc import image_to_pixmap
 
 
-
-
 class PrimaryWindow(QMainWindow):
     """Main GUI for the Manual Calibrator application"""
 
@@ -47,6 +45,7 @@ class PrimaryWindow(QMainWindow):
 
         # Initialize data structures
         self.auto_axis_alignment = True
+        self.rotation_rectification = True
         self.image = None
         self.point_cloud = None
         self.selected_2d_points = []
@@ -230,6 +229,18 @@ class PrimaryWindow(QMainWindow):
         toolbar_layout.setContentsMargins(0, 0, 0, 0)
         toolbar_layout.setSpacing(6)
 
+        rotrect_label = QLabel("Rotation Rectification:")
+        self.rotrect_switch = Switch()
+        self.rotrect_switch.setChecked(True)
+        self.rotrect_switch.stateChanged.connect(
+            self.toggle_rotation_rectification)
+        self.rotrect_switch.setStatusTip(
+            "When enabled, applies rectification to correct sensor rotation misalignments."
+        )
+
+        toolbar_layout.addWidget(rotrect_label)
+        toolbar_layout.addWidget(self.rotrect_switch)
+
         axis_label = QLabel("Auto Axis Alignment:")
 
         self.switch = Switch()
@@ -267,21 +278,32 @@ class PrimaryWindow(QMainWindow):
     def project_extrinsics_pc_rgb(self):
         """GUI button function.Opens another windows displaying the projected pointcloud on image."""
 
+        if self.rotation_rectification:
+            rect_matrix = DSEC_R_RECT_RGB
+        else:
+            rect_matrix = np.eye(3)
+
         process = mp.Process(target=launch_projection_window,
                              kwargs=dict(window=ImageViewer, image=self.base_image.copy(),
                                          point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
                                          intrinsics=self.rgb_camera_matrix, axis_alignment=self.auto_axis_alignment,
-                                         rect_matrix=DSEC_R_RECT_RGB))
+                                         rect_matrix=rect_matrix))
 
         self.pv_processes.append(process)
         process.start()
 
     def project_extrinsics_pc_evt(self):
+
+        if self.rotation_rectification:
+            rect_matrix = DSEC_R_RECT_EVENT
+        else:
+            rect_matrix = np.eye(3)
+
         process = mp.Process(target=launch_projection_window,
                              kwargs=dict(window=EventLidarViewer, image=self.event_image,
                                          point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
                                          intrinsics=self.evt_camera_matrix, axis_alignment=self.auto_axis_alignment,
-                                         rect_matrix=DSEC_R_RECT_EVENT
+                                         rect_matrix=rect_matrix
                                          ))
 
         self.pv_processes.append(process)
@@ -289,10 +311,16 @@ class PrimaryWindow(QMainWindow):
 
     def project_extrinsics_rgb_ev(self):
 
+        if self.rotation_rectification:
+            rect_matrices = dict(rgb=DSEC_R_RECT_RGB,
+                                 event=DSEC_R_RECT_EVENT)
+        else:
+            rect_matrices = None
+
         process = mp.Process(target=launch_projection_window,
                              kwargs=dict(window=EventImageViewer, evt_image=self.event_image,
                                          rgb_image=self.image, extrinsics_data=self._extrinsic_data,
-                                         K_evt=self.evt_camera_matrix, K_rgb=self.rgb_camera_matrix))
+                                         K_evt=self.evt_camera_matrix, K_rgb=self.rgb_camera_matrix, rect_matrices=rect_matrices))
 
         self.pv_processes.append(process)
         process.start()
@@ -382,7 +410,7 @@ class PrimaryWindow(QMainWindow):
 
         if self.selected_2d_points:
             self.selected_2d_points.pop()
-            self.draw_points_on_image(self.selected_2d_points,self.base_image)
+            self.draw_points_on_image(self.selected_2d_points, self.base_image)
             self.image_label.setPixmap(self.pixmap)
 
         if self.selected_3d_points:
@@ -395,6 +423,12 @@ class PrimaryWindow(QMainWindow):
         print('Info: Remaining 2D points: ', self.selected_2d_points)
         print('Info: Remaining 3D points: ', self.selected_3d_points)
         print('Info: Remaining EV points: ', self.selected_ev_points)
+
+    def toggle_rotation_rectification(self, state):
+        if state == Qt.CheckState.Checked.value:
+            self.rotation_rectification = True
+        else:
+            self.rotation_rectification = False
 
     def toggle_unification(self, state):
         if state == Qt.CheckState.Checked.value:
@@ -421,7 +455,7 @@ class PrimaryWindow(QMainWindow):
             if 'image_points' in data:
                 self.selected_2d_points.extend(data['image_points'])
                 if hasattr(self, 'pixmap'):
-                     self.draw_points_on_image(self.selected_2d_points)
+                    self.draw_points_on_image(self.selected_2d_points)
             if 'lidar_points' in data:
                 self.selected_3d_points.extend(data['lidar_points'])
             if 'event_points' in data:
@@ -518,14 +552,14 @@ class PrimaryWindow(QMainWindow):
         self.pixmap = image_to_pixmap(rgb_image)
         self.image_label.setPixmap(self.pixmap)
         self.image_label.setScaledContents(True)
-    
+
     def draw_points_on_image(self, points: list, rgb_image: np.ndarray | None = None):
         if rgb_image is not None:
             self.pixmap = image_to_pixmap(rgb_image)
         for idx, point in enumerate(points):
             q_point = QPoint(point[0], point[1])
             self.draw_circle(q_point, idx)
-    
+
     def start_ev_timer(self):
         """starts the pyqt timer"""
         self.ev_timer = QTimer(self)
@@ -569,7 +603,7 @@ class PrimaryWindow(QMainWindow):
 
             rgb_evt_T_data = dict(T_rgb_to_evt=T_rgb_evt)
             rgb_evt_T_data = serialize_dict(rgb_evt_T_data)
-        
+
             self._extrinsic_data.update(rgb_evt_T_data)
             print('RGB to Event Transformation Matrix:')
             print(T_rgb_evt)
@@ -577,36 +611,66 @@ class PrimaryWindow(QMainWindow):
             print("Error: Select at least 4 point correspondences.")
 
     def compute_pc_evt_transform(self):
+
+        if self.rotation_rectification:
+            rect = DSEC_R_RECT_EVENT
+        else:
+            rect = None
+
+        if self.auto_axis_alignment:
+            basis = None
+        else:
+            basis = BASIS_MATRIX
         output = compute_pnp_transform(self.selected_ev_points,
                                        self.selected_3d_points,
-                                       self.evt_camera_matrix, BASIS_MATRIX, DSEC_R_RECT_EVENT)
+                                       self.evt_camera_matrix, basis, rect)
 
         if output is not None:
             T_lidar_to_evt, _ = output
-            evt_lidar_T_data = serialize_dict(dict(T_lidar_to_evt=T_lidar_to_evt))
+            evt_lidar_T_data = serialize_dict(
+                dict(T_lidar_to_evt=T_lidar_to_evt))
             self._extrinsic_data.update(evt_lidar_T_data)
             self.switch.setEnabled(False)
 
     def compute_pc_rgb_transform(self):
         """Computes the transformation matrix from the selected correspondences."""
 
+        if self.rotation_rectification:
+            rect = DSEC_R_RECT_RGB
+        else:
+            rect = None
+
+        if self.auto_axis_alignment:
+            basis = None
+        else:
+            basis = BASIS_MATRIX
+
         output = compute_pnp_transform(self.selected_2d_points,
                                        self.selected_3d_points,
-                                       self.rgb_camera_matrix, BASIS_MATRIX, DSEC_R_RECT_RGB)
+                                       self.rgb_camera_matrix, basis, rect)
 
         if output is not None:
             T_lidar_to_cam, _ = output
-            rgb_lidar_T_data = serialize_dict({"T_lidar_to_rgb": T_lidar_to_cam})
+            rgb_lidar_T_data = serialize_dict(
+                {"T_lidar_to_rgb": T_lidar_to_cam})
             self._extrinsic_data.update(rgb_lidar_T_data)
             self.switch.setEnabled(False)
 
     def compute_all(self):
         """Computes the transfromation matrices of all the modalities simultaneoulsy."""
+        if self.rotation_rectification:
+            rect_matrices = dict(rgb=DSEC_R_RECT_RGB,
+                                 event=DSEC_R_RECT_EVENT)
+        else:
+            rect_matrices = dict(rgb=np.eye(3),
+                                 event=np.eye(3))
+
         extrinsics = optimize_calibration(points_lidar=self.selected_3d_points,
-                             points_rgb=self.selected_2d_points,
-                             points_event=self.selected_ev_points,
-                             K_rgb=self.rgb_camera_matrix, K_ev=self.evt_camera_matrix)
+                                          points_rgb=self.selected_2d_points,
+                                          points_event=self.selected_ev_points,
+                                          K_rgb=self.rgb_camera_matrix, K_ev=self.evt_camera_matrix, rect_matrices=rect_matrices)
         self._extrinsic_data = serialize_dict(extrinsics)
+
     def closeEvent(self, event):
         """Ensure PyVista process is closed when GUI closes."""
 

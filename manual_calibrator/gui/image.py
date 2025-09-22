@@ -27,7 +27,7 @@ class ImageViewer(QMainWindow):
         self.base_image = image.copy()
         self.point_cloud = point_cloud
         self.axis_alignment = axis_alignment
-        self.rect_matrix = rect_matrix[:3, :3].T
+        self.rect_matrix = rect_matrix[:3, :3]
         self.retrive_info(extrinsics, intrinsics)
         self.project()
         self.initUI()
@@ -122,7 +122,7 @@ class ImageViewer(QMainWindow):
                                    translation_vector=t_vec,
                                    camera_matrix=self.intrinsics,
                                    unification=self.axis_alignment,
-                                   rectification_matrix=self.rect_matrix)
+                                   rectification_matrix=self.rect_matrix.T)
         if intensity:
             intensities = self.point_cloud.point.intensity.numpy()
 
@@ -152,7 +152,7 @@ class ImageViewer(QMainWindow):
 class EventImageViewer(QMainWindow):
     """Secondary window for displaying the image."""
 
-    def __init__(self, evt_image, rgb_image, extrinsics_data, K_evt, K_rgb):
+    def __init__(self, evt_image, rgb_image, extrinsics_data, K_evt, K_rgb, rect_matrices=None):
         super().__init__()
         self.setWindowTitle("Event Projection Viewer")
         self.setGeometry(100, 100, 800, 600)
@@ -163,6 +163,7 @@ class EventImageViewer(QMainWindow):
         self.extrinsics = np.array(extrinsics_data['T_rgb_to_evt'])
         self.K_evt = K_evt
         self.K_rgb = K_rgb
+        self.rect_matrices = rect_matrices
 
         self.project()
         self.initUI()
@@ -205,7 +206,7 @@ class EventImageViewer(QMainWindow):
     def project(self):
         """Projects the event image onto the RGB image using the extrinsics."""
         self.image = visualize_rgb_event(self.evt_image, self.rgb_image,
-                                         self.K_evt, self.K_rgb, self.extrinsics)
+                                         self.K_evt, self.K_rgb, self.extrinsics, self.rect_matrices)
 
     def save_image(self):
         """Save image to disk."""
