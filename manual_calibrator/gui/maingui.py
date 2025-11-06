@@ -16,9 +16,9 @@ import numpy as np
 import cv2
 import open3d as o3d
 import pyvista as pv
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDialog, QToolBar, QToolButton, QSizePolicy,
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QMessageBox, QToolBar, QToolButton, QSizePolicy,
                              QPushButton, QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar)
-from PyQt6.QtCore import Qt, QPoint, QTimer, QSize
+from PyQt6.QtCore import Qt, QPoint, QTimer, QSize, QProcess
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon, QAction
 
 # internal imports
@@ -108,6 +108,7 @@ class PrimaryWindow(QMainWindow):
                              "Save Ca&libration \U0001F3AF", self)
         save_calib.setStatusTip("Save Calibration to disk")
         save_calib.triggered.connect(self.save_extrinsics)
+
 
         menu = self.menuBar()
         file_menu = menu.addMenu("&File")
@@ -203,6 +204,15 @@ class PrimaryWindow(QMainWindow):
         pc_menu.addAction(intensity)
         pc_menu.addSeparator()
         pc_menu.addAction(depth)
+
+        help_menu = menu.addMenu("&Help")
+        
+        restart = QAction(ucode_icon("\U0001F501"), 
+                          "Restart App", self)
+        restart.setStatusTip("Restart the Application")
+        restart.triggered.connect(self.confirm_restart)
+        help_menu.addAction(restart)
+
 
         toolbar = QToolBar('ToolBar')
         toolbar.setIconSize(QSize(24, 24))
@@ -681,6 +691,17 @@ class PrimaryWindow(QMainWindow):
                         proc.terminate()
                         proc.join()
         event.accept()
+
+
+    def confirm_restart(self):
+        reply = QMessageBox.question(self, "Restart", "Restart the app?",
+                                     QMessageBox.StandardButton.Yes |  QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            self.restart()
+
+    def restart(self):
+        QProcess.startDetached(sys.executable, sys.argv)
+        QApplication.quit() 
 
 
 def run_pyvista_visualizer(cloud, scalar, cmap, conn):
