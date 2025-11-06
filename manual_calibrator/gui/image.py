@@ -4,7 +4,7 @@
 import numpy as np
 import imageio.v2 as imageio
 from PyQt6.QtWidgets import (QVBoxLayout, QDialog, QPushButton, QSlider, QFormLayout, QMainWindow, QWidget,
-                             QLabel, QFileDialog, QHBoxLayout, QDoubleSpinBox)
+                             QLabel, QFileDialog, QHBoxLayout, QComboBox, QListView)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QImage, QIcon
 
@@ -29,8 +29,10 @@ class ImageViewer(QMainWindow):
         self.axis_alignment = axis_alignment
         self.rect_matrix = rect_matrix[:3, :3]
         self.retrive_info(extrinsics, intrinsics)
-        self.project()
         self.initUI()
+        self.project()
+        self.display_image()
+        
 
 
     def retrive_info(self, extrinsics, intrinsics):
@@ -51,15 +53,29 @@ class ImageViewer(QMainWindow):
         # Top controls
         h1_layout = QHBoxLayout()
         h2_layout = QFormLayout()
+        h3_layout = QFormLayout()
 
         self.alpha_button = QSlider(Qt.Orientation.Horizontal, self)
         self.alpha_button.setRange(0, 100)
         self.alpha_button.setValue(100)
         self.alpha_button.setFixedWidth(200)
-        self.alpha_button.valueChanged.connect(self.on_alpha_changed)
+        self.alpha_button.valueChanged.connect(self.on_attrib_changed)
 
         h2_layout.addRow("Alpha:", self.alpha_button)
         h1_layout.addLayout(h2_layout)
+
+
+        self.depth_option = QComboBox(self)
+        view = QListView()
+        self.depth_option.setView(view)
+        self.depth_option.addItems(['x', 'y', 'z'])
+        self.depth_option.setCurrentIndex(0)
+        self.depth_option.currentIndexChanged.connect(self.on_attrib_changed)
+        self.depth_option.setMaxVisibleItems(2)
+        view.setMaximumHeight(80)
+        view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        h3_layout.addRow("Depth Dimension:", self.depth_option)
+        h1_layout.addLayout(h3_layout)
 
         self.paint_intensity_button = QPushButton("Intensity Mode")
         self.paint_intensity_button.setEnabled(False)
@@ -83,6 +99,7 @@ class ImageViewer(QMainWindow):
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.display_image()
         layout.addWidget(self.image_label)
+
 
     def depth_mode(self):
         """Displays the projection with points colorized with depth."""
@@ -126,12 +143,9 @@ class ImageViewer(QMainWindow):
         if intensity:
             intensities = self.point_cloud.point.intensity.numpy()
 
-        if hasattr(self, 'alpha_button'):
-            alpha_value = self.alpha_button.value() / 100
-        else:
-            alpha_value = 1.0
+        alpha_value = self.alpha_button.value() / 100
         self.image = visualize_projection(
-            self.image, points_3d, points_2d, intensities, alpha_value)
+            self.image, points_3d, points_2d, intensities, self.depth_option.currentIndex(), alpha_value)
 
     def save_image(self):
         """Save image to disk."""
@@ -140,12 +154,11 @@ class ImageViewer(QMainWindow):
         if file_path:
             imageio.imwrite(file_path, self.image)
 
-    def on_alpha_changed(self):
+    def on_attrib_changed(self):
+        """Triggered when user changes alpha or depth axis."""
         self.image = self.base_image.copy()
-        if self.paint_intensity_button.isEnabled():
-            self.project(intensity=False)
-        else:
-            self.project()
+        use_intensity = not self.paint_intensity_button.isEnabled()
+        self.project(intensity=use_intensity)
         self.display_image()
 
 

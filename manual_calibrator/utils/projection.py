@@ -168,8 +168,9 @@ def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.nda
 
 
 def visualize_projection(image: np.ndarray, points_3d: np.ndarray,
-                         points_2d: np.ndarray, intensities: Optional[np.ndarray] = None, alpha: float = 0.5,
-                         color_map: int = cv2.COLORMAP_JET) -> np.ndarray:
+                         points_2d: np.ndarray, intensities: Optional[np.ndarray] = None, depth_dim: int = 0,
+                         alpha: float = 0.5,
+                         color_map: int = cv2.COLORMAP_JET, debug=False, ) -> np.ndarray:
     """
     visualizes the projection of point cloud using depth or intensity information.
     basically points are colored using this information.
@@ -185,12 +186,14 @@ def visualize_projection(image: np.ndarray, points_3d: np.ndarray,
     returns: point cloud painted image.
     """
 
-    valid_mask = points_3d[:, 0] > 0
+    valid_mask = points_3d[:, depth_dim] > 0
     points_3d = points_3d[valid_mask]
     points_2d = points_2d[valid_mask]
+    if debug:
+        print('points_3d, points_2d shape:', len(points_3d), len(points_2d))
     overlay = image.copy()
     if intensities is None:
-        painting_values = points_3d[:, 0]  # x-coordinate represents depth
+        painting_values = points_3d[:, depth_dim]
     else:
         painting_values = intensities[valid_mask]
     # Normalize the depth values to map them to colors

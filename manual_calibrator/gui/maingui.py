@@ -44,8 +44,8 @@ class PrimaryWindow(QMainWindow):
         self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
 
         # Initialize data structures
-        self.auto_axis_alignment = True
-        self.rotation_rectification = True
+        self.auto_axis_alignment = False
+        self.rotation_rectification = False
         self.image = None
         self.point_cloud = None
         self.selected_2d_points = []
@@ -231,7 +231,7 @@ class PrimaryWindow(QMainWindow):
 
         rotrect_label = QLabel("Rotation Rectification:")
         self.rotrect_switch = Switch()
-        self.rotrect_switch.setChecked(True)
+        self.rotrect_switch.setChecked(self.rotation_rectification)
         self.rotrect_switch.stateChanged.connect(
             self.toggle_rotation_rectification)
         self.rotrect_switch.setStatusTip(
@@ -244,7 +244,7 @@ class PrimaryWindow(QMainWindow):
         axis_label = QLabel("Auto Axis Alignment:")
 
         self.switch = Switch()
-        self.switch.setChecked(True)
+        self.switch.setChecked(self.auto_axis_alignment)
         self.switch.stateChanged.connect(self.toggle_unification)
         self.switch.setStatusTip(
             "When enabled, the co-ordinate system of lidar and rgb/event camera sensor are auto-aligned.")
@@ -641,9 +641,9 @@ class PrimaryWindow(QMainWindow):
             rect = None
 
         if self.auto_axis_alignment:
-            basis = None
-        else:
             basis = BASIS_MATRIX
+        else:
+            basis = None
 
         output = compute_pnp_transform(self.selected_2d_points,
                                        self.selected_3d_points,
