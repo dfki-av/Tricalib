@@ -113,3 +113,21 @@ def geodesic_distance_from_rotm(R1: np.ndarray, R2: np.ndarray, fix_numeric: boo
         axis = axis / (2.0 * np.sin(theta))
 
     return np.degrees(theta), axis
+
+def scale_K(K:np.ndarray, oldres:tuple, newres:tuple) -> np.ndarray:
+    """
+    Scales the existing intrinsics based on the new resolution
+    
+    :param K: Old intrinsics
+    :param oldres: Old resolution
+    :param newres: target resolution
+    """
+
+    scale_x = newres[0]/oldres[0]
+    scale_y = newres[1]/oldres[1]
+    K_new = np.array([
+        [K[0, 0]*scale_x, 0, K[0, 2]*scale_x],
+        [0, K[1, 1]*scale_y, K[1, 2]*scale_y],
+        [0, 0, 1]
+    ])
+    return K_new

@@ -15,6 +15,8 @@ import numpy as np
 import open3d as o3d
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QIcon, QFont
 from PyQt6.QtCore import Qt
+import imageio.v2 as imageio
+
 
 
 def load_json(file_path: str) -> Any:
@@ -43,6 +45,29 @@ def load_point_cloud(file_path: str) -> np.ndarray:
     pcd = o3d.io.read_point_cloud(file_path)
     return np.asarray(pcd.points)
 
+def read_image(file_path: str) -> np.ndarray:
+    """
+    loads the image from the disk.
+    """
+    img = imageio.imread(file_path)
+    return img
+
+def save_image(file_path: str, img_data: np.ndarray) -> None:
+    """
+    save the image to the disk.
+    """
+    imageio.imsave(file_path, img_data)
+    
+
+def read_point_cloud(file_path:str) -> np.ndarray:
+    """
+    loads the PCD point cloud with intensities from the disk.
+    """
+    pcd = o3d.t.io.read_point_cloud(
+                file_path, format='auto')
+    pcd_points = pcd.point.positions.numpy()
+    pcd_intensity = pcd.point.intensity.numpy().reshape(-1, 1)
+    return np.hstack((pcd_points, pcd_intensity))
 
 def load_yaml(file_path: str):
     """

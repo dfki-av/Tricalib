@@ -248,9 +248,11 @@ def visualize_rgb_event(evt_img, rgb_img, K_ev, K_rgb, extrinsics, rect_matrices
     mapping = (mapping/mapping[..., -1][..., None])[..., :2]
     mapping = mapping.astype('float32')
     proj_img = cv2.remap(rgb_img, mapping, None, interpolation=cv2.INTER_CUBIC)
-    blue = np.array([255, 0, 0])
-    red = np.array([0, 0, 255])
-    proj_img[np.all(evt_img == blue, axis=-1)] = blue
-    proj_img[np.all(evt_img == red, axis=-1)] = red
+    evt_img = evt_img.astype(np.uint8)
+    red_mask = (evt_img[:, :, 0] > 150) & (evt_img[:, :, 1] < 100) & (evt_img[:, :, 2] < 100)
+    blue_mask = (evt_img[:, :, 0] < 100) & (evt_img[:, :, 1] < 100) & (evt_img[:, :, 2] > 150)
+    proj_img[red_mask] = evt_img[red_mask]
+    proj_img[blue_mask] = evt_img[blue_mask]
+    proj_img = cv2.cvtColor(proj_img, cv2.COLOR_BGR2RGB)
 
     return proj_img

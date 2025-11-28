@@ -16,8 +16,8 @@ import numpy as np
 import cv2
 import open3d as o3d
 import pyvista as pv
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QMessageBox, QToolBar, QToolButton, QSizePolicy,
-                             QPushButton, QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar)
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QMessageBox, QToolBar, QSizePolicy,
+                             QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar)
 from PyQt6.QtCore import Qt, QPoint, QTimer, QSize, QProcess
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon, QAction
 
@@ -56,6 +56,7 @@ class PrimaryWindow(QMainWindow):
         self.parent_conn_lidar, self.child_conn_lidar = mp.Pipe()
         self.parent_conn_event, self.child_conn_event = mp.Pipe()
         self.pv_processes = []
+        self.path_list = [None, None, None]
 
         # GUI Layout
         self.initUI()
@@ -206,26 +207,24 @@ class PrimaryWindow(QMainWindow):
         pc_menu.addAction(depth)
 
         help_menu = menu.addMenu("&Help")
-        
-        restart = QAction(ucode_icon("\U0001F501"), 
+
+        restart = QAction(ucode_icon("\U0001F501"),
                           "Restart App", self)
         restart.setStatusTip("Restart the Application")
         restart.triggered.connect(self.confirm_restart)
         help_menu.addAction(restart)
 
-
         toolbar = QToolBar('ToolBar')
         toolbar.setIconSize(QSize(24, 24))
         toolbar.setOrientation(Qt.Orientation.Vertical)
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, toolbar)
-        undo_action = QAction(self.style().standardIcon(
-            self.style().StandardPixmap.SP_ArrowBack), "Undo", self)
+        undo_action = QAction(QIcon('./data/icons/undo.svg'), "Undo", self)
         undo_action.setStatusTip(
             "Undoes selection of points across RGB, LiDAR and Event camera")
         undo_action.triggered.connect(self.undo)
         toolbar.addAction(undo_action)
 
-        horiz_toolbar = QToolBar("Hoizon Toolbar")
+        horiz_toolbar = QToolBar("Horizon Toolbar")
         horiz_toolbar.setIconSize(QSize(24, 24))
         horiz_toolbar.setOrientation(Qt.Orientation.Horizontal)
         self.addToolBar(horiz_toolbar)
@@ -239,7 +238,7 @@ class PrimaryWindow(QMainWindow):
         toolbar_layout.setContentsMargins(0, 0, 0, 0)
         toolbar_layout.setSpacing(6)
 
-        rotrect_label = QLabel("Rotation Rectification:")
+        rotrect_label = QLabel("Stereo Rectification:")
         self.rotrect_switch = Switch()
         self.rotrect_switch.setChecked(self.rotation_rectification)
         self.rotrect_switch.stateChanged.connect(
@@ -297,7 +296,7 @@ class PrimaryWindow(QMainWindow):
                              kwargs=dict(window=ImageViewer, image=self.base_image.copy(),
                                          point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
                                          intrinsics=self.rgb_camera_matrix, axis_alignment=self.auto_axis_alignment,
-                                         rect_matrix=rect_matrix))
+                                         rect_matrix=rect_matrix, path_list=self.path_list))
 
         self.pv_processes.append(process)
         process.start()
@@ -313,7 +312,7 @@ class PrimaryWindow(QMainWindow):
                              kwargs=dict(window=EventLidarViewer, image=self.event_image,
                                          point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
                                          intrinsics=self.evt_camera_matrix, axis_alignment=self.auto_axis_alignment,
-                                         rect_matrix=rect_matrix
+                                         rect_matrix=rect_matrix, path_list=self.path_list[1:]
                                          ))
 
         self.pv_processes.append(process)
@@ -330,7 +329,8 @@ class PrimaryWindow(QMainWindow):
         process = mp.Process(target=launch_projection_window,
                              kwargs=dict(window=EventImageViewer, evt_image=self.event_image,
                                          rgb_image=self.image, extrinsics_data=self._extrinsic_data,
-                                         K_evt=self.evt_camera_matrix, K_rgb=self.rgb_camera_matrix, rect_matrices=rect_matrices))
+                                         K_evt=self.evt_camera_matrix, K_rgb=self.rgb_camera_matrix,
+                                         rect_matrices=rect_matrices, path_list=self.path_list))
 
         self.pv_processes.append(process)
         process.start()
@@ -503,6 +503,7 @@ class PrimaryWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Load Image", "", "Images (*.png *.jpg)")
         if file_path:
+            self.path_list[0] = os.path.dirname(file_path)
             self.image = cv2.imread(file_path)
             self.image_label.setStatusTip(os.path.basename(file_path))
             self.display_image()
@@ -511,6 +512,7 @@ class PrimaryWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Load Event Image", "", "Event Images (*.png *.jpg)")
         if file_path:
+            self.path_list[1] = os.path.dirname(file_path)
             self.event_image = cv2.imread(file_path)
             process = mp.Process(target=run_event_data_visualizer, args=(
                 self.child_conn_event, self.event_image, file_path))
@@ -524,6 +526,7 @@ class PrimaryWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Load Point Cloud", "", "Point Clouds (*.pcd)")
         if file_path:
+            self.path_list[-1] = os.path.dirname(file_path)
             self.point_cloud = o3d.t.io.read_point_cloud(
                 file_path, format='auto')
             self.intensity()
@@ -628,9 +631,9 @@ class PrimaryWindow(QMainWindow):
             rect = None
 
         if self.auto_axis_alignment:
-            basis = None
-        else:
             basis = BASIS_MATRIX
+        else:
+            basis = None
         output = compute_pnp_transform(self.selected_ev_points,
                                        self.selected_3d_points,
                                        self.evt_camera_matrix, basis, rect)
@@ -695,13 +698,13 @@ class PrimaryWindow(QMainWindow):
 
     def confirm_restart(self):
         reply = QMessageBox.question(self, "Restart", "Restart the app?",
-                                     QMessageBox.StandardButton.Yes |  QMessageBox.StandardButton.No)
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
             self.restart()
 
     def restart(self):
         QProcess.startDetached(sys.executable, sys.argv)
-        QApplication.quit() 
+        QApplication.quit()
 
 
 def run_pyvista_visualizer(cloud, scalar, cmap, conn):

@@ -1,22 +1,26 @@
 
+# python imports
+import os
 
 # third-party imports
 import numpy as np
 import imageio.v2 as imageio
-from PyQt6.QtWidgets import (QVBoxLayout, QDialog, QPushButton, QSlider, QFormLayout, QMainWindow, QWidget,
-                             QLabel, QFileDialog, QHBoxLayout, QComboBox, QListView)
+from PyQt6.QtWidgets import (QVBoxLayout, QMessageBox, QPushButton, QSlider, QFormLayout, QMainWindow, QWidget, QInputDialog,
+                             QLabel, QFileDialog, QHBoxLayout, QComboBox, QListView, QProgressDialog, QApplication)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QImage, QIcon
 
+
 # internal imports
-from manual_calibrator.utils.constants import DSEC_R_RECT_RGB
 from manual_calibrator.utils.projection import project_points, visualize_projection, visualize_rgb_event
+from manual_calibrator.utils.io import read_image, read_point_cloud, ucode_icon
+from manual_calibrator.misc import decompose_T
 
 
 class ImageViewer(QMainWindow):
     """Secondary window for displaying the image."""
 
-    def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment, rect_matrix):
+    def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment, rect_matrix, path_list):
         super().__init__()
         self.setWindowTitle("Projection Viewer")
         self.setGeometry(100, 100, 800, 600)
@@ -28,12 +32,11 @@ class ImageViewer(QMainWindow):
         self.point_cloud = point_cloud
         self.axis_alignment = axis_alignment
         self.rect_matrix = rect_matrix[:3, :3]
+        self.path_list = path_list
         self.retrive_info(extrinsics, intrinsics)
         self.initUI()
         self.project()
         self.display_image()
-        
-
 
     def retrive_info(self, extrinsics, intrinsics):
         self.intrinsics = intrinsics
@@ -64,7 +67,6 @@ class ImageViewer(QMainWindow):
         h2_layout.addRow("Alpha:", self.alpha_button)
         h1_layout.addLayout(h2_layout)
 
-
         self.depth_option = QComboBox(self)
         view = QListView()
         self.depth_option.setView(view)
@@ -90,6 +92,10 @@ class ImageViewer(QMainWindow):
         self.save_button = QPushButton("Save Projection")
         self.save_button.clicked.connect(self.save_image)
         h1_layout.addWidget(self.save_button)
+
+        self.video_button = QPushButton(ucode_icon("\U000025B6\U0000FE0F"), "Generate Video")
+        self.video_button.clicked.connect(self.generate_video)
+        h1_layout.addWidget(self.video_button)
         h1_layout.setSpacing(10)
 
         layout.addLayout(h1_layout)
@@ -99,7 +105,6 @@ class ImageViewer(QMainWindow):
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.display_image()
         layout.addWidget(self.image_label)
-
 
     def depth_mode(self):
         """Displays the projection with points colorized with depth."""
@@ -133,7 +138,7 @@ class ImageViewer(QMainWindow):
         intensities = None
         r_mat = self.ext_mat[:3, :3]
         t_vec = self.ext_mat[:3, 3]
-    
+
         points_2d = project_points(points_3d=points_3d,
                                    rotation_matrix=r_mat,
                                    translation_vector=t_vec,
@@ -161,11 +166,81 @@ class ImageViewer(QMainWindow):
         self.project(intensity=use_intensity)
         self.display_image()
 
+    def generate_video(self):
+        """Generate a video from image and point cloud sequence with progress display."""
+        R, t = decompose_T(np.array(self.ext_mat))
+        fps, ok = QInputDialog.getInt(self, "Set Video FPS", "Enter FPS value:",
+                                      value=4, min=1, max=60, step=1)
+
+        if not ok:
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Video", "", "Video File (*.mp4; *.mkv)"
+        )
+        if not file_path:
+            return
+
+        # Get image list
+
+        img_dir = self.path_list[0]
+        pc_dir = self.path_list[-1]
+        imgext = os.listdir(img_dir)[0].split('.')[-1]
+        files = sorted(os.listdir(pc_dir))
+        total = len(files)
+
+        if total == 0:
+            QMessageBox.warning(self, "Error", "No files found in directory.")
+            return
+
+        progress = QProgressDialog("Generating video...", "Cancel", 0, total, self)
+        progress.setWindowTitle("Please wait")
+        progress.setWindowModality(Qt.WindowModality.ApplicationModal)
+        progress.setAutoClose(True)
+        progress.setAutoReset(True)
+        progress.setMinimumWidth(300)
+
+        av = self.alpha_button.value() / 100
+
+        with imageio.get_writer(file_path, fps=fps) as writer:
+            for i, path in enumerate(files, start=1):
+                if progress.wasCanceled():
+                    QMessageBox.information(self, "Cancelled", "Video generation cancelled.")
+                    break
+
+                img_path = os.path.join(img_dir, path.replace('pcd', imgext))
+                pc_path = os.path.join(pc_dir, path)
+
+                try:
+                    img = read_image(img_path)
+                    pc = read_point_cloud(pc_path)
+                    points_2d = project_points(pc[:, :3], R, t, self.intrinsics,
+                                               self.axis_alignment, self.rect_matrix)
+                    use_intensity = not self.paint_intensity_button.isEnabled()
+                    if use_intensity:
+                        ints = pc[:, 3]
+                    else:
+                        ints = None
+                    proj_img = visualize_projection(
+                        img, pc[:, :3], points_2d, ints,
+                        self.depth_option.currentIndex(), av
+                    )
+                    writer.append_data(proj_img)
+                except Exception as e:
+                    print(f"Error processing {path}: {e}")
+
+                progress.setValue(i)
+                QApplication.processEvents()  
+
+        progress.close()
+
+        QMessageBox.information(self, "Done", "✅ Video generation complete!")
+
 
 class EventImageViewer(QMainWindow):
     """Secondary window for displaying the image."""
 
-    def __init__(self, evt_image, rgb_image, extrinsics_data, K_evt, K_rgb, rect_matrices=None):
+    def __init__(self, evt_image, rgb_image, extrinsics_data, K_evt, K_rgb, rect_matrices, path_list):
         super().__init__()
         self.setWindowTitle("Event Projection Viewer")
         self.setGeometry(100, 100, 800, 600)
@@ -177,6 +252,7 @@ class EventImageViewer(QMainWindow):
         self.K_evt = K_evt
         self.K_rgb = K_rgb
         self.rect_matrices = rect_matrices
+        self.path_list = path_list
 
         self.project()
         self.initUI()
@@ -184,7 +260,6 @@ class EventImageViewer(QMainWindow):
     def initUI(self):
         """Initialize the GUI."""
 
-        # ---- Central widget required for QMainWindow ----
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
@@ -228,14 +303,74 @@ class EventImageViewer(QMainWindow):
         if file_path:
             imageio.imwrite(file_path, self.image)
 
+    def generate_video(self):
+        """Generate a video from image and point cloud sequence with progress display."""
+        fps, ok = QInputDialog.getInt(self, "Set Video FPS", "Enter FPS value:",
+                                      value=4, min=1, max=60, step=1)
+
+        if not ok:
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Video", "", "Video File (*.mp4; *.mkv)"
+        )
+        if not file_path:
+            return
+
+        # Get image list
+
+        img_dir = self.path_list[0]
+        evt_dir = self.path_list[-1]
+        files = sorted(os.listdir(evt_dir))
+        total = len(files)
+        
+        if total == 0:
+            QMessageBox.warning(self, "Error", "No files found in directory.")
+            return
+
+        progress = QProgressDialog("Generating video...", "Cancel", 0, total, self)
+        progress.setWindowTitle("Please wait")
+        progress.setWindowModality(Qt.WindowModality.ApplicationModal)
+        progress.setAutoClose(True)
+        progress.setAutoReset(True)
+        progress.setMinimumWidth(300)
+
+        with imageio.get_writer(file_path, fps=fps) as writer:
+            for i, path in enumerate(files, start=1):
+                if progress.wasCanceled():
+                    QMessageBox.information(self, "Cancelled", "Video generation cancelled.")
+                    break
+
+                img_path = os.path.join(img_dir, path)
+                evt_path = os.path.join(evt_dir, path)
+
+                try:
+                    rgb_image = read_image(img_path)
+                    evt_image = read_image(evt_path)
+                    proj_img = visualize_rgb_event(evt_image, rgb_image,
+                                         self.K_evt, self.K_rgb, self.extrinsics, self.rect_matrices)
+              
+                    writer.append_data(proj_img)
+                except Exception as e:
+                    print(f"Error processing {path}: {e}")
+
+                progress.setValue(i)
+                QApplication.processEvents()  
+
+        progress.close()
+
+        QMessageBox.information(self, "Done", "✅ Video generation complete!")
+
 
 class EventLidarViewer(ImageViewer):
 
-    def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment, rect_matrix):
-        super().__init__(image, point_cloud, extrinsics, intrinsics, axis_alignment, rect_matrix)
+    def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment, rect_matrix, path_list):
+        super().__init__(image, point_cloud, extrinsics,
+                         intrinsics, axis_alignment, rect_matrix, path_list)
 
     def retrive_info(self, extrinsics, intrinsics):
         self.intrinsics = intrinsics
         lidar2cam = np.array(extrinsics['T_lidar_to_evt'])
         self.ext_mat = lidar2cam
         self.intrinsics = intrinsics
+
