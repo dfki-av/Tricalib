@@ -57,9 +57,19 @@ class PrimaryWindow(QMainWindow):
         self.parent_conn_event, self.child_conn_event = mp.Pipe()
         self.pv_processes = []
         self.path_list = [None, None, None]
+        self.state_dict = dict(rgb_image='pass',
+                               point_cloud='pass',
+                               event_image='pass',
+                               intrinsics='pass',
+                               pnp_points='pass',
+                               extrinsics='pass',
+                               load_state=False
+                               )
 
         # GUI Layout
         self.initUI()
+        self.load_state()
+        self.state_dict['load_state'] = False
 
     def initUI(self):
         """initializes the GUI when instantiated."""
@@ -109,7 +119,6 @@ class PrimaryWindow(QMainWindow):
                              "Save Ca&libration \U0001F3AF", self)
         save_calib.setStatusTip("Save Calibration to disk")
         save_calib.triggered.connect(self.save_extrinsics)
-
 
         menu = self.menuBar()
         file_menu = menu.addMenu("&File")
@@ -213,6 +222,12 @@ class PrimaryWindow(QMainWindow):
         restart.setStatusTip("Restart the Application")
         restart.triggered.connect(self.confirm_restart)
         help_menu.addAction(restart)
+        help_menu.addSeparator()
+        reinit = QAction(ucode_icon("\U0000267B"),
+                          "Reinitialize", self)
+        reinit.setStatusTip("Restart the Application with same state")
+        reinit.triggered.connect(self.reinitialize)
+        help_menu.addAction(reinit)
 
         toolbar = QToolBar('ToolBar')
         toolbar.setIconSize(QSize(24, 24))
@@ -446,90 +461,141 @@ class PrimaryWindow(QMainWindow):
         else:
             self.auto_axis_alignment = False
 
-    def load_intrinsics(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Intrinsics", "", "JSON File (*.json)")
-        if file_path:
-            data: dict = load_json(file_path)
-            self.evt_camera_matrix = fxfycxcy_to_matrix(
-                data.get('event_camera_intrinsic'))
-            self.rgb_camera_matrix = fxfycxcy_to_matrix(
-                data.get('rgb_camera_intrinsic'))
+    def load_intrinsics(self, file_path=None):
+        if file_path == 'pass':
+            return
+        if not file_path:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Load Intrinsics", "", "JSON File (*.json)")
+            if file_path is None:
+                return
+        data: dict = load_json(file_path)
+        self.state_dict['intrinsics'] = file_path
+        self.evt_camera_matrix = fxfycxcy_to_matrix(
+            data.get('event_camera_intrinsic'))
+        self.rgb_camera_matrix = fxfycxcy_to_matrix(
+            data.get('rgb_camera_intrinsic'))
 
-    def load_pnp_points(self):
+    def load_pnp_points(self, file_path=None):
         """GUI button function. Loads the correspondence points saved on the disk"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Pairwise Points", "", "JSON File (*.json)")
-        if file_path:
-            data = load_json(file_path)
-            if 'image_points' in data:
-                self.selected_2d_points.extend(data['image_points'])
-                if hasattr(self, 'pixmap'):
-                    self.draw_points_on_image(self.selected_2d_points)
-            if 'lidar_points' in data:
-                self.selected_3d_points.extend(data['lidar_points'])
-            if 'event_points' in data:
-                self.selected_ev_points.extend(data['event_points'])
-                self.parent_conn_event.send(("LOAD", self.selected_ev_points))
+        if file_path == 'pass':
+            return
+        if not file_path:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Load Pairwise Points", "", "JSON File (*.json)")
+            if file_path is None:
+                return
 
-    def load_extrinsics(self):
+        data = load_json(file_path)
+        self.state_dict['pnp_points'] = file_path
+        if 'image_points' in data:
+            self.selected_2d_points.extend(data['image_points'])
+            if hasattr(self, 'pixmap'):
+                self.draw_points_on_image(self.selected_2d_points)
+        if 'lidar_points' in data:
+            self.selected_3d_points.extend(data['lidar_points'])
+        if 'event_points' in data:
+            self.selected_ev_points.extend(data['event_points'])
+            self.parent_conn_event.send(("LOAD", self.selected_ev_points))
+
+    def load_extrinsics(self, file_path=None):
         """GUI button function. Loads the extrinsics file stored on the disk."""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Extrinsics", "", "JSON File (*.json)")
-        if file_path:
-            self._extrinsic_data = load_json(file_path)
 
-            if 'K_evt' not in self._extrinsic_data:
-                try:
-                    self._extrinsic_data['K_evt'] = self.evt_camera_matrix.tolist(
-                    )
-                except Exception as e:
-                    print(e)
-                    print('Possibly the event camera intrisics are not loaded.')
-                    pass
-            if 'K_rgb' not in self._extrinsic_data:
-                try:
-                    self._extrinsic_data['K_rgb'] = self.rgb_camera_matrix.tolist(
-                    )
-                except Exception as e:
-                    print(e)
-                    print('Possibly the rgb camera intrinsics are not loaded')
-                    pass
-            self.switch.setEnabled(False)
+        if file_path == 'pass':
+            return
 
-    def load_image(self):
+        if not file_path:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Load Extrinsics", "", "JSON File (*.json)")
+            if file_path is None:
+                return
+
+        self._extrinsic_data = load_json(file_path)
+        self.state_dict['extrinsics'] = file_path
+
+        if 'K_evt' not in self._extrinsic_data:
+            try:
+                self._extrinsic_data['K_evt'] = self.evt_camera_matrix.tolist(
+                )
+            except Exception as e:
+                print(e)
+                print('Possibly the event camera intrisics are not loaded.')
+                pass
+        if 'K_rgb' not in self._extrinsic_data:
+            try:
+                self._extrinsic_data['K_rgb'] = self.rgb_camera_matrix.tolist(
+                )
+            except Exception as e:
+                print(e)
+                print('Possibly the rgb camera intrinsics are not loaded')
+                pass
+        self.switch.setEnabled(False)
+
+    def load_image(self, file_path=None):
         """GUI button function. Loads the image from the disk"""
         # Load an image
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Image", "", "Images (*.png *.jpg)")
-        if file_path:
-            self.path_list[0] = os.path.dirname(file_path)
-            self.image = cv2.imread(file_path)
-            self.image_label.setStatusTip(os.path.basename(file_path))
-            self.display_image()
+        if file_path == 'pass':
+            return
+   
+        if not file_path:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Load Image", "", "Images (*.png *.jpg)")
+            if file_path is None:
+                return
+        self.state_dict['rgb_image'] = file_path
+        self.path_list[0] = os.path.dirname(file_path)
+        self.image = cv2.imread(file_path)
+        self.image_label.setStatusTip(os.path.basename(file_path))
+        self.display_image()
 
-    def load_event_image(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Event Image", "", "Event Images (*.png *.jpg)")
-        if file_path:
-            self.path_list[1] = os.path.dirname(file_path)
-            self.event_image = cv2.imread(file_path)
-            process = mp.Process(target=run_event_data_visualizer, args=(
-                self.child_conn_event, self.event_image, file_path))
-            self.pv_processes.append(process)
-            process.start()
-            self.start_ev_timer()
+    def load_event_image(self, file_path=None):
 
-    def load_pointcloud(self):
+        if file_path == 'pass':
+            return
+
+        if not file_path:
+
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Load Event Image", "", "Event Images (*.png *.jpg)")
+            if file_path is None:
+                return
+        self.state_dict['event_image'] = file_path
+        self.path_list[1] = os.path.dirname(file_path)
+        self.event_image = cv2.imread(file_path)
+        process = mp.Process(target=run_event_data_visualizer, args=(
+            self.child_conn_event, self.event_image, file_path))
+        self.pv_processes.append(process)
+        process.start()
+        self.start_ev_timer()
+
+    def load_pointcloud(self, file_path=None):
         """GUI button function. Loads the point cloud from the disk."""
         # Load a 3D point cloud
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Point Cloud", "", "Point Clouds (*.pcd)")
-        if file_path:
-            self.path_list[-1] = os.path.dirname(file_path)
-            self.point_cloud = o3d.t.io.read_point_cloud(
-                file_path, format='auto')
-            self.intensity()
+        if file_path == 'pass':
+            return
+        if not file_path:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Load Point Cloud", "", "Point Clouds (*.pcd)")
+            if file_path is None:
+                return
+        self.state_dict['point_cloud'] = file_path
+        self.path_list[-1] = os.path.dirname(file_path)
+        self.point_cloud = o3d.t.io.read_point_cloud(
+            file_path, format='auto')
+        self.intensity()
+
+    def load_state(self):
+        try:
+            self.state_dict = load_json('./state_dict.json')
+        except FileNotFoundError:
+            return
+        if self.state_dict.get('load_state'):
+            self.load_image(self.state_dict['rgb_image'])
+            self.load_pointcloud(self.state_dict['point_cloud'])
+            self.load_event_image(self.state_dict['event_image'])
+            self.load_intrinsics(self.state_dict['intrinsics'])
+            self.load_pnp_points(self.state_dict['pnp_points'])
+            self.load_extrinsics(self.state_dict['extrinsics'])
 
     def save_points(self):
         """GUI button function. Saves the selected points to disk in JSON format."""
@@ -687,6 +753,10 @@ class PrimaryWindow(QMainWindow):
     def closeEvent(self, event):
         """Ensure PyVista process is closed when GUI closes."""
 
+        if not self.state_dict['load_state']:
+            if os.path.exists('./state_dict.json'):
+                os.remove('./state_dict.json')
+
         if hasattr(self, "pv_processes"):
             if self.pv_processes:
                 for proc in self.pv_processes:
@@ -695,17 +765,23 @@ class PrimaryWindow(QMainWindow):
                         proc.join()
         event.accept()
 
-
-    def confirm_restart(self):
+    def confirm_restart(self, reinit=False):
         reply = QMessageBox.question(self, "Restart", "Restart the app?",
                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
+            if reinit:
+                  write_json('./state_dict.json', self.state_dict)
             self.restart()
 
     def restart(self):
         QProcess.startDetached(sys.executable, sys.argv)
         QApplication.quit()
 
+    def reinitialize(self):
+        self.state_dict['load_state'] = True
+        self.confirm_restart(True)
+        
+      
 
 def run_pyvista_visualizer(cloud, scalar, cmap, conn):
     """separate function to launch on different process so that visualizer runs on a different process. Needed for linux platforms."""
