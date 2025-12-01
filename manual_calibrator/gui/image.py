@@ -182,9 +182,11 @@ class ImageViewer(QMainWindow):
             return
 
         # Get image list
-
-        img_dir = self.path_list[0]
-        pc_dir = self.path_list[-1]
+        if hasattr(self, 'event_flag'):
+            img_dir = os.path.dirname(self.path_list['event_image'])
+        else:
+            img_dir = os.path.dirname(self.path_list['rgb_image'])
+        pc_dir = os.path.dirname(self.path_list['point_cloud'])
         imgext = os.listdir(img_dir)[0].split('.')[-1]
         files = sorted(os.listdir(pc_dir))
         total = len(files)
@@ -271,8 +273,13 @@ class EventImageViewer(QMainWindow):
         self.save_button = QPushButton("Save Projection")
         self.save_button.clicked.connect(self.save_image)
         h1_layout.addWidget(self.save_button)
+    
+        
+        self.video_button = QPushButton(ucode_icon("\U000025B6\U0000FE0F"), "Generate Video")
+        self.video_button.clicked.connect(self.generate_video)
+        h1_layout.addWidget(self.video_button)
         h1_layout.setSpacing(10)
-
+    
         layout.addLayout(h1_layout)
 
         # QLabel to display the image
@@ -319,8 +326,8 @@ class EventImageViewer(QMainWindow):
 
         # Get image list
 
-        img_dir = self.path_list[0]
-        evt_dir = self.path_list[-1]
+        img_dir = os.path.dirname(self.path_list['rgb_image'])
+        evt_dir = os.path.dirname(self.path_list['event_image'])
         files = sorted(os.listdir(evt_dir))
         total = len(files)
         
@@ -365,6 +372,8 @@ class EventImageViewer(QMainWindow):
 class EventLidarViewer(ImageViewer):
 
     def __init__(self, image, point_cloud, extrinsics, intrinsics, axis_alignment, rect_matrix, path_list):
+        self.event_flag = True
+
         super().__init__(image, point_cloud, extrinsics,
                          intrinsics, axis_alignment, rect_matrix, path_list)
 

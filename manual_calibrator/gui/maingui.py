@@ -56,7 +56,6 @@ class PrimaryWindow(QMainWindow):
         self.parent_conn_lidar, self.child_conn_lidar = mp.Pipe()
         self.parent_conn_event, self.child_conn_event = mp.Pipe()
         self.pv_processes = []
-        self.path_list = [None, None, None]
         self.state_dict = dict(rgb_image='pass',
                                point_cloud='pass',
                                event_image='pass',
@@ -322,11 +321,16 @@ class PrimaryWindow(QMainWindow):
         else:
             rect_matrix = np.eye(3)
 
+        if self.auto_axis_alignment:
+            axis_aligment = BASIS_MATRIX
+        else:
+            axis_aligment = None
+
         process = mp.Process(target=launch_projection_window,
                              kwargs=dict(window=ImageViewer, image=self.base_image.copy(),
                                          point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
-                                         intrinsics=self.rgb_camera_matrix, axis_alignment=self.auto_axis_alignment,
-                                         rect_matrix=rect_matrix, path_list=self.path_list))
+                                         intrinsics=self.rgb_camera_matrix, axis_alignment=axis_aligment,
+                                         rect_matrix=rect_matrix, path_list=self.state_dict))
 
         self.pv_processes.append(process)
         process.start()
@@ -338,11 +342,16 @@ class PrimaryWindow(QMainWindow):
         else:
             rect_matrix = np.eye(3)
 
+        if self.auto_axis_alignment:
+            axis_alignment = BASIS_MATRIX
+        else:
+            axis_alignment = None
+
         process = mp.Process(target=launch_projection_window,
                              kwargs=dict(window=EventLidarViewer, image=self.event_image,
                                          point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
-                                         intrinsics=self.evt_camera_matrix, axis_alignment=self.auto_axis_alignment,
-                                         rect_matrix=rect_matrix, path_list=self.path_list[1:]
+                                         intrinsics=self.evt_camera_matrix, axis_alignment=axis_alignment,
+                                         rect_matrix=rect_matrix, path_list=self.state_dict
                                          ))
 
         self.pv_processes.append(process)
@@ -360,7 +369,7 @@ class PrimaryWindow(QMainWindow):
                              kwargs=dict(window=EventImageViewer, evt_image=self.event_image,
                                          rgb_image=self.image, extrinsics_data=self._extrinsic_data,
                                          K_evt=self.evt_camera_matrix, K_rgb=self.rgb_camera_matrix,
-                                         rect_matrices=rect_matrices, path_list=self.path_list))
+                                         rect_matrices=rect_matrices, path_list=self.state_dict))
 
         self.pv_processes.append(process)
         process.start()
@@ -558,7 +567,6 @@ class PrimaryWindow(QMainWindow):
             if file_path is None:
                 return
         self.state_dict['rgb_image'] = file_path
-        self.path_list[0] = os.path.dirname(file_path)
         self.image = cv2.imread(file_path)
         self.image_label.setStatusTip(os.path.basename(file_path))
         self.display_image()
@@ -575,7 +583,6 @@ class PrimaryWindow(QMainWindow):
             if file_path is None:
                 return
         self.state_dict['event_image'] = file_path
-        self.path_list[1] = os.path.dirname(file_path)
         self.event_image = cv2.imread(file_path)
         process = mp.Process(target=run_event_data_visualizer, args=(
             self.child_conn_event, self.event_image, file_path))
@@ -594,7 +601,6 @@ class PrimaryWindow(QMainWindow):
             if file_path is None:
                 return
         self.state_dict['point_cloud'] = file_path
-        self.path_list[-1] = os.path.dirname(file_path)
         self.point_cloud = o3d.t.io.read_point_cloud(
             file_path, format='auto')
         self.intensity()
