@@ -110,6 +110,16 @@ class PrimaryWindow(QMainWindow):
         load_calib.setStatusTip("Load existing calibration from disk")
         load_calib.triggered.connect(self.load_extrinsics)
 
+        load_state = QAction(ucode_icon("\U0001F4E4"),
+                             f"Load &State \U0001F5C3", self)
+        load_state.setStatusTip("Load state of tool from disk")
+        load_state.triggered.connect(self.load_state_button)
+
+        save_state = QAction(ucode_icon("\U0001F4BE"),
+                             f"Save Stat&e \U0001F5C3", self)
+        save_state.setStatusTip("Load state of tool from disk")
+        save_state.triggered.connect(self.save_state)
+
         save_pts = QAction(ucode_icon("\U0001F4BE"),
                            "Save Poin&ts \U0001F538", self)
         save_pts.setStatusTip("Save selected points to disk")
@@ -134,9 +144,14 @@ class PrimaryWindow(QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction(load_calib)
         file_menu.addSeparator()
+        file_menu.addAction(load_state)
+        file_menu.addSeparator()
         file_menu.addAction(save_pts)
         file_menu.addSeparator()
         file_menu.addAction(save_calib)
+        file_menu.addSeparator()
+        file_menu.addAction(save_state)
+
 
         calib_menu = menu.addMenu("&Calibration")
 
@@ -584,9 +599,23 @@ class PrimaryWindow(QMainWindow):
             file_path, format='auto')
         self.intensity()
 
-    def load_state(self):
+    def load_state_button(self):
+        self.load_state('read')
+
+    def load_state(self, path=None):
+        if path == 'read':
+            path, _ = QFileDialog.getOpenFileName(
+                self, "Load State file", "", "JSON File (*.json)")
+
+        if path is None:
+            fpaths = [i for i in os.listdir('.') if i.startswith('state_dict')]
+            if fpaths:
+                path = fpaths[0]
+            else:
+                return
+
         try:
-            self.state_dict = load_json('./state_dict.json')
+            self.state_dict = load_json(path)
         except FileNotFoundError:
             return
         if self.state_dict.get('load_state'):
@@ -608,11 +637,20 @@ class PrimaryWindow(QMainWindow):
             write_json(file_path, data)
 
     def save_extrinsics(self):
-        """GUI button function. Saves the calculates extrinsics to the disk."""
+        """GUI button function. Saves the calculated extrinsics to the disk."""
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Save Extrinsics", "", "JSON File (*.json)")
         if file_path:
             write_json(file_path, self._extrinsic_data)
+
+    def save_state(self):
+        """GUI button function. Saves state to the disk."""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save State", "", "JSON File (*.json)")
+        if file_path:
+            self.state_dict['load_state'] = True
+            write_json(file_path, self.state_dict)
+
 
     def display_pointcloud(self, cloud=None, scalar=None, cmap=None):
         """Instantiates another mp Process to display the loaded point cloud.
