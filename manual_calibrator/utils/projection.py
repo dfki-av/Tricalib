@@ -45,7 +45,7 @@ def undistort_fisheye(image, return_newk=False):
 def project_points(points_3d: np.ndarray,
                    rotation_matrix: np.ndarray,
                    translation_vector: np.ndarray,
-                   camera_matrix: np.ndarray, unification: bool = False,
+                   camera_matrix: np.ndarray, unification: np.ndarray | None = None,
                    rectification_matrix: np.ndarray | None = None) -> np.ndarray:
     """
     Projects the 3D points in LiDAR to image plane.
@@ -60,8 +60,8 @@ def project_points(points_3d: np.ndarray,
 
     # Apply the rotation and translation to the 3D points
 
-    if unification:
-        rotation_matrix = rotation_matrix@BASIS_MATRIX
+    if unification is not None:
+        rotation_matrix = rotation_matrix@unification
 
     if rectification_matrix is None:
         rectification_matrix = np.eye(3)

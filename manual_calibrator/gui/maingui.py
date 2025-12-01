@@ -781,11 +781,16 @@ class PrimaryWindow(QMainWindow):
         else:
             rect_matrices = dict(rgb=np.eye(3),
                                  event=np.eye(3))
+            
+        if self.auto_axis_alignment:
+            basis = BASIS_MATRIX
+        else:
+            basis = None
 
         extrinsics = optimize_calibration(points_lidar=self.selected_3d_points,
                                           points_rgb=self.selected_2d_points,
                                           points_event=self.selected_ev_points,
-                                          K_rgb=self.rgb_camera_matrix, K_ev=self.evt_camera_matrix, rect_matrices=rect_matrices)
+                                          K_rgb=self.rgb_camera_matrix, K_ev=self.evt_camera_matrix, unification=basis, rect_matrices=rect_matrices)
         self._extrinsic_data = serialize_dict(extrinsics)
 
     def closeEvent(self, event):

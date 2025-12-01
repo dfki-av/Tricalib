@@ -55,7 +55,7 @@ def parameters_to_matrices(params: np.ndarray) -> dict:
 
 def reprojection_error(params: np.ndarray, points_lidar: list, points_rgb: list, points_event: list,
                        K_rgb: list, K_ev: list, lidar2rgb: dict = None,
-                       lidar2evt: dict = None, rgb2event: dict = None, rect_matrics: dict = None) -> np.ndarray:
+                       lidar2evt: dict = None, rgb2event: dict = None, unification: np.ndarray | None = None, rect_matrics: dict = None) -> np.ndarray:
     """
     Computes the reprojection error for the given parameters.
 
@@ -105,7 +105,7 @@ def reprojection_error(params: np.ndarray, points_lidar: list, points_rgb: list,
 
     # Project points from LiDAR to RGB
     points_lidar_projected_to_rgb = project_points(
-        points_lidar_rgb, R_lidar_rgb, tvec_rgb, K_rgb, unification=True, rectification_matrix=rect_matrics['rgb'].T)
+        points_lidar_rgb, R_lidar_rgb, tvec_rgb, K_rgb, unification=unification, rectification_matrix=rect_matrics['rgb'].T)
 
     if rgb2event is not None:
         points_rgb_event = np.array(points_rgb+rgb2event['image_points'])
@@ -127,7 +127,7 @@ def reprojection_error(params: np.ndarray, points_lidar: list, points_rgb: list,
         points_event_for_lidar = np.array(points_event)
 
     points_lidar_projected_to_event = project_points(
-        points_lidar_evt, R_lidar_ev, tvec_ev, K_ev, unification=True, rectification_matrix=rect_matrics['event'].T)
+        points_lidar_evt, R_lidar_ev, tvec_ev, K_ev, unification=unification, rectification_matrix=rect_matrics['event'].T)
 
     # Compute the reprojection error
 
@@ -143,7 +143,8 @@ def reprojection_error(params: np.ndarray, points_lidar: list, points_rgb: list,
 
 def optimize_calibration(points_lidar: list, points_rgb: list, points_event: list,
                          K_rgb: list | np.ndarray, K_ev: list | np.ndarray, params: np.ndarray = None,
-                         lidar2rgb: dict = None, lidar2evt: dict = None, rgb2evt: dict = None, rect_matrices: dict = None) -> dict:
+                         lidar2rgb: dict = None, lidar2evt: dict = None, rgb2evt: dict = None,
+                         unification: np.ndarray | None = None, rect_matrices: dict = None) -> dict:
     """
     Optimize the calibration parameters using least squares.
 
@@ -171,7 +172,7 @@ def optimize_calibration(points_lidar: list, points_rgb: list, points_event: lis
     result = least_squares(
         reprojection_error, x0=params,
         args=(points_lidar, points_rgb, points_event,
-              K_rgb, K_ev, lidar2rgb, lidar2evt, rgb2evt, rect_matrices),
+              K_rgb, K_ev, lidar2rgb, lidar2evt, rgb2evt, unification, rect_matrices),
         method='lm', verbose=2)
 
     extrinsics = parameters_to_matrices(result.x)
