@@ -109,16 +109,12 @@ def project_rgb_to_event(points_rgb, K_rgb, K_ev, extrinsics, rect_matrices):
     extrinsics = r_rect_rgb @ extrinsics @ np.linalg.inv(
         r_rect_evt)
     R = extrinsics[:3, :3]
-
-    # Compute the inverse projection matrix
-    proj_matrix = np.linalg.inv(K_rgb @ R @ np.linalg.inv(K_ev))
-
-    # Convert points to homogeneous coordinates
+    t = extrinsics[:3, 3:4]
     points_rgb_hom = np.hstack([points_rgb, np.ones((points_rgb.shape[0], 1))])
 
-    # Map points to event image coordinates
-    points_event_hom = (proj_matrix @ points_rgb_hom.T).T
-
+    rays_rgb = np.linalg.inv(K_rgb) @ points_rgb_hom.T  # (3x3, 3xN) -> 3xN
+    rays_evt = (R @ rays_rgb) + t  # (3x3, 3xN) -> 3xN
+    points_event_hom = (K_ev @ rays_evt).T  # (3x3, 3xN) -> 3xN -> Nx3
     # Normalize
     points_event = points_event_hom[:, :2] / points_event_hom[:, 2, None]
     return points_event
@@ -235,22 +231,30 @@ def visualize_rgb_event(evt_img, rgb_img, K_ev, K_rgb, extrinsics, rect_matrices
     # print('Final Transformation Used:')
     # print(extrinsics)
     R = extrinsics[:3, :3]
-    proj_matrix = K_rgb @ R @ np.linalg.inv(K_ev)
     ht, wd, _ = evt_img.shape
 
     # coords: ht, wd, 2
-    coords = np.stack(np.meshgrid(np.arange(wd), np.arange(ht)), axis=-1)
-    # coords_hom: ht, wd, 3
-    coords_hom = np.concatenate((coords, np.ones((ht, wd, 1))), axis=-1)
-    # mapping: ht, wd, 3
-    mapping = (proj_matrix @ coords_hom[..., None]).squeeze()
-    # mapping: ht, wd, 2
-    mapping = (mapping/mapping[..., -1][..., None])[..., :2]
+    # coords in event image dimension transformed to rgb image plane.
+    uu, vv = np.meshgrid(np.arange(wd), np.arange(ht))
+    points_event = np.column_stack([uu.ravel(), vv.ravel()])
+    points_event_hom = np.hstack(
+        [points_event, np.ones((points_event.shape[0], 1))])
+    rays_event = np.linalg.inv(K_ev) @ points_event_hom.T
+    R = extrinsics[:3, :3]
+    t = extrinsics[:3, 3:4]
+    rays_rgb = R.T @ rays_event - t
+    points_rgb_hom = (K_rgb @ rays_rgb).T
+    points_rgb = points_rgb_hom[:, :2] / points_rgb_hom[:, 2, None]
+
+    # coords_hom: ht, wd, 2
+    mapping = np.reshape(points_rgb, (ht, wd, 2))
     mapping = mapping.astype('float32')
     proj_img = cv2.remap(rgb_img, mapping, None, interpolation=cv2.INTER_CUBIC)
     evt_img = evt_img.astype(np.uint8)
-    red_mask = (evt_img[:, :, 0] > 150) & (evt_img[:, :, 1] < 100) & (evt_img[:, :, 2] < 100)
-    blue_mask = (evt_img[:, :, 0] < 100) & (evt_img[:, :, 1] < 100) & (evt_img[:, :, 2] > 150)
+    red_mask = (evt_img[:, :, 0] > 150) & (
+        evt_img[:, :, 1] < 100) & (evt_img[:, :, 2] < 100)
+    blue_mask = (evt_img[:, :, 0] < 100) & (
+        evt_img[:, :, 1] < 100) & (evt_img[:, :, 2] > 150)
     proj_img[red_mask] = evt_img[red_mask]
     proj_img[blue_mask] = evt_img[blue_mask]
     proj_img = cv2.cvtColor(proj_img, cv2.COLOR_BGR2RGB)
