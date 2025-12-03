@@ -10,7 +10,7 @@ __doc__ = """
 # third-party imports
 import numpy as np
 import cv2
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDialog, QToolBar,
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QDialog, QToolBar, QFormLayout,
                              QPushButton, QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar)
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
@@ -147,3 +147,21 @@ class SecondaryWindow(QMainWindow):
                     self.selected_2d_points.extend(msg[1])
                     for i, point in enumerate(self.selected_2d_points):
                         self.draw_circle(QPoint(*point), i)
+
+
+class ReprojectionErrorWindow(QDialog):
+    def __init__(self, data: dict, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Reprojection Error")
+        self.data = data
+        self.initUI()
+    
+    def initUI(self):
+        layout = QVBoxLayout()
+
+        for k, v in self.data.items():
+            form = QFormLayout()
+            form.addRow(f"{k}:    ", QLabel(f"{v} px", self))
+            layout.addLayout(form)
+
+        self.setLayout(layout)

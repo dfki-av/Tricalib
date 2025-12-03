@@ -66,6 +66,30 @@ def image_to_pixmap(img: np.ndarray):
     return pixmap
 
 
+def matrices_to_params(extrinsics: dict) -> np.ndarray:
+    """
+    Converts dict of matrices to list of parameters
+    """
+    params = []
+    T_lidar_to_rgb = np.array(extrinsics['T_lidar_to_rgb'])
+    T_lidar_to_evt = np.array(extrinsics['T_lidar_to_evt'])
+    T_rgb_to_evt = np.array(extrinsics['T_rgb_to_evt'])
+    R_lr, t_lr = decompose_T(T_lidar_to_rgb)
+    rquat_lr = R.from_matrix(R_lr)
+    params.extend(rquat_lr.as_quat().tolist())
+    params.extend(t_lr.tolist())
+    R_le, t_le = decompose_T(T_lidar_to_evt)
+    rquat_le = R.from_matrix(R_le)
+    params.extend(rquat_le.as_quat().tolist())
+    params.extend(t_le.tolist())
+    R_re, t_re = decompose_T(T_rgb_to_evt)
+    rquat_re = R.from_matrix(R_re)
+    params.extend(rquat_re.as_quat().tolist())
+    params.extend(t_re.tolist())
+    return np.array(params)
+
+
+
 def geodesic_distance_from_rotm(R1: np.ndarray, R2: np.ndarray, fix_numeric: bool = False):
     """
     Returns (theta, axis) where theta is the geodesic distance in degrees
@@ -114,10 +138,11 @@ def geodesic_distance_from_rotm(R1: np.ndarray, R2: np.ndarray, fix_numeric: boo
 
     return np.degrees(theta), axis
 
-def scale_K(K:np.ndarray, oldres:tuple, newres:tuple) -> np.ndarray:
+
+def scale_K(K: np.ndarray, oldres: tuple, newres: tuple) -> np.ndarray:
     """
     Scales the existing intrinsics based on the new resolution
-    
+
     :param K: Old intrinsics
     :param oldres: Old resolution
     :param newres: target resolution

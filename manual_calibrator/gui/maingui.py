@@ -27,10 +27,10 @@ from manual_calibrator.utils.io import (write_json, load_json, ucode_icon,
 from manual_calibrator.utils.projection import normalize_pixels, compute_pnp_transform
 from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT, BASIS_MATRIX, DSEC_R_RECT_RGB
 from manual_calibrator.gui.image import ImageViewer, EventImageViewer, EventLidarViewer
-from manual_calibrator.gui.secgui import SecondaryWindow
+from manual_calibrator.gui.secgui import SecondaryWindow, ReprojectionErrorWindow
 from manual_calibrator.gui.style import Switch
-from manual_calibrator.optim.optimizer import optimize_calibration
-from manual_calibrator.misc import image_to_pixmap
+from manual_calibrator.optim.optimizer import optimize_calibration, reprojection_error
+from manual_calibrator.misc import image_to_pixmap, matrices_to_params
 
 
 class PrimaryWindow(QMainWindow):
@@ -151,7 +151,6 @@ class PrimaryWindow(QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction(save_state)
 
-
         calib_menu = menu.addMenu("&Calibration")
 
         compute_all = QAction(ucode_icon("\U0001F4BB"), "Compute all", self)
@@ -238,7 +237,7 @@ class PrimaryWindow(QMainWindow):
         help_menu.addAction(restart)
         help_menu.addSeparator()
         reinit = QAction(ucode_icon("\U0000267B"),
-                          "Reinitialize", self)
+                         "Reinitialize", self)
         reinit.setStatusTip("Restart the Application with same state")
         reinit.triggered.connect(self.reinitialize)
         help_menu.addAction(reinit)
@@ -252,6 +251,15 @@ class PrimaryWindow(QMainWindow):
             "Undoes selection of points across RGB, LiDAR and Event camera")
         undo_action.triggered.connect(self.undo)
         toolbar.addAction(undo_action)
+        toolbar.addSeparator()
+
+        error_action = QAction(QIcon('./data/icons/metrics.svg'), "Reprojection Error", self)
+        error_action.setStatusTip(
+            "Calculates reprojections error for selected points")
+        error_action.triggered.connect(self.compute_rp_e)
+        toolbar.addAction(error_action)
+        
+        
 
         horiz_toolbar = QToolBar("Horizon Toolbar")
         horiz_toolbar.setIconSize(QSize(24, 24))
@@ -424,9 +432,9 @@ class PrimaryWindow(QMainWindow):
         pen = QPen(QColor("red"))
         pen.setWidth(2)
         painter.setPen(pen)
-        radius = 5
+        radius = 3
 
-        brush = QColor(0, 0, 0, 0)
+        brush = QColor(255, 255, 0, 127)
         painter.setBrush(brush)
         painter.drawEllipse(position, radius, radius)
         text_offset = position + QPoint(radius+1, -(radius+1))
@@ -560,7 +568,7 @@ class PrimaryWindow(QMainWindow):
         # Load an image
         if file_path == 'pass':
             return
-   
+
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Load Image", "", "Images (*.png *.jpg)")
@@ -657,7 +665,6 @@ class PrimaryWindow(QMainWindow):
             self.state_dict['load_state'] = True
             write_json(file_path, self.state_dict)
 
-
     def display_pointcloud(self, cloud=None, scalar=None, cmap=None):
         """Instantiates another mp Process to display the loaded point cloud.
         Multiprocessing is required to visualized the point cloud on linux platforms."""
@@ -706,6 +713,29 @@ class PrimaryWindow(QMainWindow):
             point = self.parent_conn_event.recv()
             print("Selected EV point:", point)
             self.selected_ev_points.append(point)
+
+    def compute_rp_e(self):
+
+        if self.auto_axis_alignment:
+            unification = BASIS_MATRIX
+        else:
+            unification = np.eye(3)
+
+        if self.rotation_rectification:
+            rect_matrices = dict(rgb=DSEC_R_RECT_RGB,
+                                 event=DSEC_R_RECT_EVENT)
+        else:
+            rect_matrices = dict(rgb=np.eye(3),
+                                 event=np.eye(3))
+
+        params = matrices_to_params(self._extrinsic_data)
+        errors_dict = reprojection_error(params, self.selected_3d_points, self.selected_2d_points, self.selected_ev_points,
+                                   self.rgb_camera_matrix, self.evt_camera_matrix,
+                                   unification=unification, rect_matrics=rect_matrices, return_errors=True)
+        for k in errors_dict:
+            errors_dict[k] = np.round(np.abs(errors_dict[k].mean()), 4)      
+        dlg = ReprojectionErrorWindow(errors_dict, self)
+        dlg.show()
 
     def compute_evt_rgb_transform(self):
         if len(self.selected_2d_points) >= 4 and len(self.selected_ev_points) >= 4:
@@ -787,7 +817,7 @@ class PrimaryWindow(QMainWindow):
         else:
             rect_matrices = dict(rgb=np.eye(3),
                                  event=np.eye(3))
-            
+
         if self.auto_axis_alignment:
             basis = BASIS_MATRIX
         else:
@@ -819,7 +849,7 @@ class PrimaryWindow(QMainWindow):
                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
             if reinit:
-                  write_json('./state_dict.json', self.state_dict)
+                write_json('./state_dict.json', self.state_dict)
             self.restart()
 
     def restart(self):
@@ -829,8 +859,7 @@ class PrimaryWindow(QMainWindow):
     def reinitialize(self):
         self.state_dict['load_state'] = True
         self.confirm_restart(True)
-        
-      
+
 
 def run_pyvista_visualizer(cloud, scalar, cmap, conn):
     """separate function to launch on different process so that visualizer runs on a different process. Needed for linux platforms."""

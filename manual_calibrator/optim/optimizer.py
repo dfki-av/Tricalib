@@ -55,7 +55,9 @@ def parameters_to_matrices(params: np.ndarray) -> dict:
 
 def reprojection_error(params: np.ndarray, points_lidar: list, points_rgb: list, points_event: list,
                        K_rgb: list, K_ev: list, lidar2rgb: dict = None,
-                       lidar2evt: dict = None, rgb2event: dict = None, unification: np.ndarray | None = None, rect_matrics: dict = None) -> np.ndarray:
+                       lidar2evt: dict = None, rgb2event: dict = None,
+                       unification: np.ndarray | None = None, rect_matrics: dict = None,
+                       return_errors = False) -> np.ndarray | dict:
     """
     Computes the reprojection error for the given parameters.
 
@@ -137,6 +139,10 @@ def reprojection_error(params: np.ndarray, points_lidar: list, points_rgb: list,
                           points_lidar_projected_to_event).ravel()
     error_rgb_to_event = (points_event_for_rgb -
                           points_rgb_projected_to_event).ravel()
+    if return_errors:
+        return dict(error_lidar_to_rgb=error_lidar_to_rgb,
+                    error_lidar_to_event=error_lidar_to_evt,
+                    error_rgb_to_event=error_rgb_to_event)
 
     return np.concatenate([error_lidar_to_rgb, error_lidar_to_evt, error_rgb_to_event])
 
