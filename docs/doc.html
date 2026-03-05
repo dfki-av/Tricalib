@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TFKP-Cal — Documentation</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #1a1d27;
+      --surface:  #242a3a;
+      --surface2: #2e3352;
+      --accent:   #4f8ef7;
+      --accent2:  #7b5ff7;
+      --green:    #4cd964;
+      --text:     #d4d8f0;
+      --muted:    #7a7e9a;
+      --border:   #3a4066;
+      --radius:   10px;
+      --shadow:   0 4px 24px rgba(0,0,0,.45);
+      --font:     'Segoe UI', 'Inter', system-ui, sans-serif;
+      --mono:     'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .page-wrap { display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    nav {
+      width: 260px;
+      min-width: 260px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 32px 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .nav-logo {
+      padding: 0 24px 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .nav-logo h1 { font-size: 17px; font-weight: 700; color: #fff; }
+    .nav-logo .version {
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--surface2);
+      padding: 2px 8px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+    .nav-section { font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); padding: 14px 24px 4px; font-weight: 600; }
+    nav a {
+      display: block;
+      padding: 7px 24px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13.5px;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    nav a:hover, nav a.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(79,142,247,.07);
+    }
+
+    /* Main content */
+    main {
+      flex: 1;
+      padding: 52px 64px;
+      max-width: 960px;
+    }
+
+    /* ── Typography ───────────────────────────────────────────── */
+    h1, h2, h3, h4 { color: #fff; font-weight: 700; }
+    h1 { font-size: 36px; margin-bottom: 12px; }
+    h2 {
+      font-size: 22px;
+      margin-top: 56px;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    h3 { font-size: 16px; margin-top: 28px; margin-bottom: 8px; color: var(--accent); }
+    h4 { font-size: 14px; margin-top: 18px; color: var(--text); }
+    p  { margin-bottom: 14px; color: var(--text); }
+    a  { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    strong { color: #fff; }
+    code {
+      font-family: var(--mono);
+      background: var(--surface2);
+      color: #b0d4ff;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    pre {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 16px 0;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.55;
+      color: #b0d4ff;
+    }
+    ul, ol { padding-left: 24px; margin-bottom: 14px; }
+    li { margin-bottom: 5px; }
+
+    /* ── Hero Banner ──────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, #1a2044 0%, #221a44 100%);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 40px 44px;
+      margin-bottom: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 340px; height: 340px;
+      background: radial-gradient(circle, rgba(79,142,247,.18) 0%, transparent 70%);
+      top: -80px; right: -80px;
+      pointer-events: none;
+    }
+    .hero h1 { font-size: 30px; margin-bottom: 8px; }
+    .hero .subtitle { color: var(--muted); font-size: 15px; max-width: 560px; }
+    .badge-row { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+    .badge {
+      font-size: 12px; font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: rgba(79,142,247,.15);
+      border: 1px solid rgba(79,142,247,.35);
+      color: var(--accent);
+    }
+    .badge.green { background: rgba(76,217,100,.12); border-color: rgba(76,217,100,.3); color: var(--green); }
+    .badge.purple { background: rgba(123,95,247,.12); border-color: rgba(123,95,247,.3); color: var(--accent2); }
+
+    /* ── Callout boxes ────────────────────────────────────────── */
+    .callout {
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin: 18px 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .callout.tip    { background: rgba(76,217,100,.08); border: 1px solid rgba(76,217,100,.25); }
+    .callout.warn   { background: rgba(255,193,7,.08);  border: 1px solid rgba(255,193,7,.25); }
+    .callout.info   { background: rgba(79,142,247,.08); border: 1px solid rgba(79,142,247,.25); }
+    .callout-icon   { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .callout p      { margin: 0; font-size: 14px; }
+    .callout.tip  p { color: #a8f0b4; }
+    .callout.warn p { color: #ffe082; }
+    .callout.info p { color: #9ec4ff; }
+
+    /* ── Tables ───────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 16px;
+      font-size: 12px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 10px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    td:first-child { font-family: var(--mono); font-size: 13px; color: #b0d4ff; white-space: nowrap; }
+
+    /* ── Card grid ────────────────────────────────────────────── */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 20px 0; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: border-color .2s;
+    }
+    .card:hover { border-color: var(--accent); }
+    .card-icon { font-size: 26px; margin-bottom: 10px; }
+    .card h4   { color: #fff; margin: 0 0 6px; font-size: 14px; }
+    .card p    { color: var(--muted); font-size: 13px; margin: 0; }
+
+    /* ── Workflow steps ───────────────────────────────────────── */
+    .steps { counter-reset: step; list-style: none; padding: 0; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      align-items: flex-start;
+    }
+    .steps li::before {
+      content: counter(step);
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      color: #fff;
+      margin-top: 2px;
+    }
+    .steps li div strong { display: block; color: #fff; margin-bottom: 3px; }
+    .steps li div p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    /* ── Menu reference section ───────────────────────────────── */
+    .menu-group {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .menu-group-header {
+      background: var(--surface2);
+      padding: 10px 18px;
+      font-size: 11px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .menu-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 11px 18px;
+      border-top: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .menu-item:first-of-type { border-top: none; }
+    .menu-item .mi-name { min-width: 220px; color: #fff; font-weight: 500; }
+    .menu-item .mi-desc { color: var(--muted); font-size: 13px; }
+
+    /* ── Keyboard shortcut chip ──────────────────────────────── */
+    kbd {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 1px 7px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    /* ── Footer ───────────────────────────────────────────────── */
+    footer {
+      margin-top: 80px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--accent); }
+
+    /* ── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 800px) {
+      nav { display: none; }
+      main { padding: 28px 20px; }
+    }
+
+    /* ── Custom logo in top-right corner ────────────────────── */
+    .top-logo {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 1000;
+    }
+    .top-logo img {
+      max-width: 120px;
+      height: auto;
+      display: block;
+      /* invert/brighten so dark logos show on dark backgrounds; tweak or remove if you use a light version */
+      filter: brightness(0) invert(1);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- custom logo image (place your file in docs/ or adjust path) -->
+  <div class="top-logo">
+    <img src="https://av.dfki.de/wp-content/themes/av-dfki/images/logo_dfki_av.png" alt="DFKI AV Logo" />
+  </div>
+
+<div class="page-wrap">
+
+  <!-- ── Sidebar navigation ── -->
+  <nav>
+    <div class="nav-logo">
+      <h1>TFKP-Cal</h1>
+      <span class="version">v0.4</span>
+    </div>
+
+    <div class="nav-section">Getting Started</div>
+    <a href="#overview">Overview</a>
+    <a href="#installation">Installation</a>
+    <a href="#quickstart">Quick Start</a>
+
+    <div class="nav-section">Workflow</div>
+    <a href="#workflow">Step-by-step Guide</a>
+    <a href="#point-selection">Point Selection</a>
+    <a href="#calibration">Calibration Methods</a>
+
+    <div class="nav-section">Interface</div>
+    <a href="#file-menu">File Menu</a>
+    <a href="#calib-menu">Calibration Menu</a>
+    <a href="#pc-menu">Point Cloud Menu</a>
+    <a href="#help-menu">Help Menu</a>
+    <a href="#toolbar">Toolbars</a>
+
+    <div class="nav-section">Reference</div>
+    <a href="#data-formats">Data Formats</a>
+    <a href="#api">Module Reference</a>
+    <a href="#tips">Tips &amp; Troubleshooting</a>
+  </nav>
+
+  <!-- ── Main content ── -->
+  <main>
+
+    <!-- Hero -->
+    <div class="hero" id="overview">
+      <h1>TFKP-Cal</h1>
+      <p class="subtitle">
+        An interactive 2D–3D extrinsic calibration tool for multi-modal sensor
+        setups — RGB camera, LiDAR point cloud, and event camera — developed at
+        <strong>DFKI</strong> (German Research Center for Artificial Intelligence).
+      </p>
+      <div class="badge-row">
+        <span class="badge">Python 3.10+</span>
+        <span class="badge green"><a href='https://creativecommons.org/licenses/by-nc-sa/4.0/' target="_blank">CC BY-NC-SA 4.0</a></span>
+        <span class="badge purple">PyQt6 · OpenCV · Open3D · PyVista</span>
+      </div>
+    </div>
+
+    <!-- ── Overview ── -->
+    <p>
+      TFKP-Cal lets you manually select corresponding 2D pixel coordinates
+      on camera images and 3D points on a LiDAR point cloud, then solves for the
+      extrinsic transformation matrices that align all sensors. It supports three
+      sensor pairs:
+    </p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">📷 ↔ 🟢</div>
+        <h4>RGB ↔ LiDAR</h4>
+        <p>PnP-based extrinsic estimation from manually selected 2D–3D correspondences.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📷 ↔ ⚡</div>
+        <h4>RGB ↔ Event</h4>
+        <p>Essential matrix + pose recovery from matched pixels in both cameras.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚡ ↔ 🟢</div>
+        <h4>Event ↔ LiDAR</h4>
+        <p>PnP from event camera 2D points and corresponding LiDAR 3D points.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔗</div>
+        <h4>Joint Optimization</h4>
+        <p>Levenberg–Marquardt minimization of combined reprojection error across all three pairs simultaneously.</p>
+      </div>
+    </div>
+
+    <!-- ── Installation ── -->
+    <h2 id="installation">Installation</h2>
+    <pre>git clone https://github.com/your-org/manual_calibrator
+cd manual_calibrator
+pip install -r requirements.txt
+pip install -e .</pre>
+
+    <h3>Dependencies</h3>
+    <table>
+      <thead><tr><th>Package</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>PyQt6</td><td>GUI framework (windows, menus, toolbars)</td></tr>
+        <tr><td>opencv-python-headless</td><td>PnP solver, essential matrix, image I/O</td></tr>
+        <tr><td>open3d</td><td>Point cloud loading and tensor API</td></tr>
+        <tr><td>pyvista</td><td>Interactive 3D point cloud viewer with point picking</td></tr>
+        <tr><td>scipy</td><td>Least-squares optimizer, rotation conversions</td></tr>
+        <tr><td>numpy</td><td>Array math throughout the pipeline</td></tr>
+        <tr><td>imageio[ffmpeg]</td><td>Image read/write and video generation</td></tr>
+        <tr><td>pyyaml</td><td>YAML configuration loading</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ── Quick Start ── -->
+    <h2 id="quickstart">Quick Start</h2>
+    <pre>python -m manual_calibrator</pre>
+    <p>Or from Python:</p>
+    <pre>from manual_calibrator.gui.maingui import main
+main()</pre>
+
+    <!-- ── Workflow ── -->
+    <h2 id="workflow">Step-by-step Workflow</h2>
+    <ol class="steps">
+      <li>
+        <div>
+          <strong>Load your data</strong>
+          <p>Use <strong>File → Load RGB Image</strong>, <strong>Load Point Cloud</strong>, and
+             <strong>Load Event Image</strong> to open your sensor data. Load camera intrinsics
+             via <strong>File → Load Intrinsics</strong> (JSON with <code>fx, fy, cx, cy</code>
+             for both cameras).</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Select RGB correspondences</strong>
+          <p><strong>Right-click</strong> on the main image viewer to mark 2D points on the RGB
+             image. Each point is drawn with a numbered yellow circle.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Select LiDAR correspondences</strong>
+          <p>The PyVista 3D viewer opens automatically. Use the PyVista point-picker
+             (right-click or the picker button) to select the matching 3D points on the
+             point cloud.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Select Event camera correspondences (optional)</strong>
+          <p>The event image viewer opens in a separate window. Right-click to select
+             points that correspond to the same physical features.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Compute calibration</strong>
+          <p>Select one of the <strong>Calibration</strong> menu options:
+             pairwise PnP for individual sensor pairs, or
+             <strong>Compute All</strong> for joint optimization across all three modalities.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Verify with projection</strong>
+          <p>Use <strong>Calibration → Project …</strong> actions to open projection viewers.
+             Check alignment visually and view pixel-level reprojection errors via the
+             metrics toolbar button.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Save your results</strong>
+          <p>Save calibration to JSON with <strong>File → Save Calibration</strong>.
+             Optionally save selected points (<strong>Save Points</strong>) and the full
+             session state (<strong>Save State</strong>) for later resumption.</p>
+        </div>
+      </li>
+    </ol>
+
+    <!-- ── Point Selection ── -->
+    <h2 id="point-selection">Point Selection</h2>
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <p>Select at least <strong>6 well-distributed correspondences</strong> for reliable PnP
+         and essential matrix estimation. Points near image borders and at varying depths
+         improve geometric conditioning.</p>
+    </div>
+    <p>
+      Points must be selected in the <strong>same order</strong> across all viewers — the
+      n-th RGB point, the n-th LiDAR point, and the n-th Event point must all correspond to
+      the same physical feature in the scene.
+    </p>
+    <h3>Undo</h3>
+    <p>Click the <strong>Undo</strong> button in the left toolbar (↩ icon) to remove the last
+       selected point simultaneously from all three viewers. This keeps the correspondence
+       lists in sync.</p>
+
+    <!-- ── Calibration Methods ── -->
+    <h2 id="calibration">Calibration Methods</h2>
+
+    <h3>Pairwise PnP (LiDAR ↔ RGB / LiDAR ↔ Event)</h3>
+    <p>Uses OpenCV's <code>cv2.solvePnP</code> on the selected 2D–3D correspondences to
+       recover the rotation and translation that maps LiDAR coordinates to the camera
+       plane. The optional <strong>Stereo Rectification</strong> and <strong>Auto Axis
+       Alignment</strong> toggles pre-condition the data before solving.</p>
+
+    <h3>Essential Matrix (RGB ↔ Event)</h3>
+    <p>Uses RANSAC-based <code>cv2.findEssentialMat</code> on normalized pixel coordinates
+       from both cameras, followed by <code>cv2.recoverPose</code> to extract the relative
+       rotation and translation.</p>
+
+    <h3>Joint Optimization (Compute All)</h3>
+    <p>Jointly optimizes all three transformations using
+       <code>scipy.optimize.least_squares</code> (Levenberg–Marquardt method). The cost
+       function is the sum of reprojection residuals across all three sensor pairs.
+       Transformations are parameterized as unit quaternions + translation vectors
+       (21 parameters total).</p>
+
+    <!-- ── File Menu ── -->
+    <h2 id="file-menu">File Menu</h2>
+
+    <div class="menu-group">
+      <div class="menu-group-header">Load Data</div>
+      <div class="menu-item"><span class="mi-name">📤 Load RGB 📷</span><span class="mi-desc">Open an RGB image (PNG/JPEG) in the main viewer.</span></div>
+      <div class="menu-item"><span class="mi-name">📤 Load Point Cloud 🟢</span><span class="mi-desc">Open a <code>.pcd</code> point cloud and launch the 3D PyVista viewer.</span></div>
+      <div class="menu-item"><span class="mi-name">📤 Load Event Image ⚡</span><span class="mi-desc">Open an event camera image and launch the secondary event viewer.</span></div>
+    </div>
+
+    <div class="menu-group">
+      <div class="menu-group-header">Load Configuration</div>
+      <div class="menu-item"><span class="mi-name">📤 Load Intrinsics</span><span class="mi-desc">Load a JSON file with <code>event_camera_intrinsic</code> and <code>rgb_camera_intrinsic</code> as <code>[fx, fy, cx, cy]</code> lists.</span></div>
+    </div>
+
+    <div class="menu-group">
+      <div class="menu-group-header">Load Session</div>
+      <div class="menu-item"><span class="mi-name">📤 Load Points 🔶</span><span class="mi-desc">Restore previously saved 2D/3D correspondence points from a JSON file.</span></div>
+      <div class="menu-item"><span class="mi-name">📤 Load Calibration 🎯</span><span class="mi-desc">Load a calibration JSON with transformation matrices and intrinsics.</span></div>
+      <div class="menu-item"><span class="mi-name">📤 Load State 🗃</span><span class="mi-desc">Restore the complete tool session (file paths + loaded data) from a state JSON.</span></div>
+    </div>
+
+    <div class="menu-group">
+      <div class="menu-group-header">Save</div>
+      <div class="menu-item"><span class="mi-name">💾 Save Points 🔶</span><span class="mi-desc">Save selected 2D and 3D correspondences to JSON for later reuse.</span></div>
+      <div class="menu-item"><span class="mi-name">💾 Save Calibration 🎯</span><span class="mi-desc">Save the computed extrinsic matrices and intrinsics to JSON.</span></div>
+      <div class="menu-item"><span class="mi-name">💾 Save State 🗃</span><span class="mi-desc">Save the complete session state so it can be restored on next launch.</span></div>
+    </div>
+
+    <!-- ── Calibration Menu ── -->
+    <h2 id="calib-menu">Calibration Menu</h2>
+
+    <div class="menu-group">
+      <div class="menu-group-header">Joint (All Modalities)</div>
+      <div class="menu-item"><span class="mi-name">💻 Compute All</span><span class="mi-desc">Joint Levenberg–Marquardt optimization over all three sensor pairs simultaneously.</span></div>
+      <div class="menu-item"><span class="mi-name">🔮 Project All</span><span class="mi-desc">Open all three projection viewer windows at once.</span></div>
+    </div>
+
+    <div class="menu-group">
+      <div class="menu-group-header">RGB ↔ Event Camera</div>
+      <div class="menu-item"><span class="mi-name">💻 Compute 📷 vs. ⚡</span><span class="mi-desc">Essential matrix + pose recovery from RGB and Event correspondences.</span></div>
+      <div class="menu-item"><span class="mi-name">🔮 Project 📷 on ⚡</span><span class="mi-desc">Warp the RGB image onto the event camera plane and open a viewer.</span></div>
+    </div>
+
+    <div class="menu-group">
+      <div class="menu-group-header">RGB Camera ↔ LiDAR</div>
+      <div class="menu-item"><span class="mi-name">💻 Compute 📷 vs. 🟢</span><span class="mi-desc">PnP calibration from RGB 2D and LiDAR 3D correspondences.</span></div>
+      <div class="menu-item"><span class="mi-name">🔮 Project 🟢 on 📷</span><span class="mi-desc">Overlay the projected LiDAR point cloud on the RGB image.</span></div>
+    </div>
+
+    <div class="menu-group">
+      <div class="menu-group-header">Event Camera ↔ LiDAR</div>
+      <div class="menu-item"><span class="mi-name">💻 Compute ⚡ vs 🟢</span><span class="mi-desc">PnP calibration from Event 2D and LiDAR 3D correspondences.</span></div>
+      <div class="menu-item"><span class="mi-name">🔮 Project 🟢 on ⚡</span><span class="mi-desc">Overlay the projected LiDAR point cloud on the event camera image.</span></div>
+    </div>
+
+    <!-- ── Point Cloud Menu ── -->
+    <h2 id="pc-menu">Point Cloud Menu</h2>
+    <table>
+      <thead><tr><th>Action</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>🔆 Intensity Mode</td><td>Colour the point cloud by LiDAR return intensity using the <em>plasma</em> colormap.</td></tr>
+        <tr><td>🎚 Depth Mode</td><td>Colour the point cloud by distance along the minimum absolute axis using the <em>rainbow</em> colormap.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ── Help Menu ── -->
+    <h2 id="help-menu">Help Menu</h2>
+    <table>
+      <thead><tr><th>Action</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>📖 Documentation</td><td>Open this HTML documentation in the system's default browser.</td></tr>
+        <tr><td>🔁 Restart App</td><td>Quit and relaunch the application (confirmation dialog shown).</td></tr>
+        <tr><td>♻ Reinitialize</td><td>Save the current session state, then restart — the session is automatically restored on relaunch.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ── Toolbars ── -->
+    <h2 id="toolbar">Toolbars</h2>
+
+    <h3>Left Vertical Toolbar</h3>
+    <table>
+      <thead><tr><th>Button</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>↩ Undo</td><td>Remove the last selected point from <em>all three</em> modalities simultaneously, keeping correspondence lists in sync.</td></tr>
+        <tr><td>📊 Reprojection Error</td><td>Compute mean absolute reprojection errors (pixels) for each sensor pair using the current calibration and display them in a dialog.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Top Horizontal Toolbar</h3>
+    <table>
+      <thead><tr><th>Control</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>Stereo Rectification toggle</td><td>When <strong>ON</strong>, applies DSEC rectification matrices (<code>DSEC_R_RECT_RGB</code> / <code>DSEC_R_RECT_EVENT</code>) during projection and calibration to correct known rotation misalignments between sensors.</td></tr>
+        <tr><td>Auto Axis Alignment toggle</td><td>When <strong>ON</strong>, applies a basis matrix that converts LiDAR coordinate convention to camera convention before any projection or calibration step. Automatically disabled once a calibration is loaded.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ── Data Formats ── -->
+    <h2 id="data-formats">Data Formats</h2>
+
+    <h3>Intrinsics JSON</h3>
+    <pre>{
+  "rgb_camera_intrinsic":   [fx, fy, cx, cy],
+  "event_camera_intrinsic": [fx, fy, cx, cy]
+}</pre>
+
+    <h3>Points JSON</h3>
+    <pre>{
+  "image_points":  [[u1, v1], [u2, v2], ...],
+  "lidar_points":  [[x1, y1, z1], [x2, y2, z2], ...],
+  "event_points":  [[u1, v1], [u2, v2], ...]
+}</pre>
+
+    <h3>Calibration JSON</h3>
+    <pre>{
+  "T_lidar_to_rgb": [[4x4 matrix]],
+  "T_lidar_to_evt": [[4x4 matrix]],
+  "T_rgb_to_evt":   [[4x4 matrix]],
+  "K_rgb":          [[3x3 matrix]],
+  "K_evt":          [[3x3 matrix]]
+}</pre>
+
+    <h3>Session State JSON</h3>
+    <pre>{
+  "rgb_image":    "path/to/rgb.png",
+  "point_cloud":  "path/to/cloud.pcd",
+  "event_image":  "path/to/event.png",
+  "intrinsics":   "path/to/intrinsics.json",
+  "pnp_points":   "path/to/points.json",
+  "extrinsics":   "path/to/extrinsics.json",
+  "load_state":   true
+}</pre>
+
+    <!-- ── Module Reference ── -->
+    <h2 id="api">Module Reference</h2>
+
+    <h3>manual_calibrator.gui.maingui</h3>
+    <p>Contains <code>PrimaryWindow</code> — the main application window — and
+       module-level process-entry functions <code>run_pyvista_visualizer</code>,
+       <code>run_event_data_visualizer</code>, and <code>launch_projection_window</code>.</p>
+
+    <h3>manual_calibrator.gui.secgui</h3>
+    <p><code>SecondaryWindow</code> (event camera viewer) and
+       <code>ReprojectionErrorWindow</code> (metrics dialog).</p>
+
+    <h3>manual_calibrator.gui.image</h3>
+    <p><code>ImageViewer</code> (LiDAR→RGB projection),
+       <code>EventImageViewer</code> (RGB→Event projection), and
+       <code>EventLidarViewer</code> (LiDAR→Event projection).</p>
+
+    <h3>manual_calibrator.optim.optimizer</h3>
+    <table>
+      <thead><tr><th>Function</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>optimize_calibration()</td><td>Joint LM optimization. Returns dict of three 4×4 matrices.</td></tr>
+        <tr><td>reprojection_error()</td><td>Residual function; also callable standalone with <code>return_errors=True</code>.</td></tr>
+        <tr><td>parameters_to_matrices()</td><td>Convert 14- or 21-element param vector to matrix dict.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>manual_calibrator.utils.projection</h3>
+    <table>
+      <thead><tr><th>Function</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>project_points()</td><td>3D LiDAR → 2D image, with optional axis-alignment and rectification.</td></tr>
+        <tr><td>project_rgb_to_event()</td><td>2D RGB pixels → 2D event camera pixels via extrinsic.</td></tr>
+        <tr><td>compute_pnp_transform()</td><td>PnP solver returning 4×4 LiDAR→camera transform.</td></tr>
+        <tr><td>visualize_projection()</td><td>Overlay projected point cloud on image with depth/intensity colouring.</td></tr>
+        <tr><td>visualize_rgb_event()</td><td>Dense warp of RGB → event plane using cv2.remap.</td></tr>
+        <tr><td>normalize_pixels()</td><td>Pixel coordinates → normalized camera coordinates.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>manual_calibrator.utils.io</h3>
+    <p>File I/O helpers: <code>load_json</code>, <code>write_json</code>,
+       <code>load_yaml</code>, <code>read_image</code>, <code>save_image</code>,
+       <code>read_point_cloud</code>, <code>load_point_cloud</code>,
+       <code>ucode_icon</code>, <code>fxfycxcy_to_matrix</code>,
+       <code>serialize_dict</code>.</p>
+
+    <h3>manual_calibrator.misc</h3>
+    <p>Math utilities: <code>normalize_quat</code>, <code>quat_to_matrix</code>,
+       <code>compose_T</code>, <code>decompose_T</code>, <code>image_to_pixmap</code>,
+       <code>matrices_to_params</code>, <code>geodesic_distance_from_rotm</code>,
+       <code>scale_K</code>.</p>
+
+    <!-- ── Tips ── -->
+    <h2 id="tips">Tips &amp; Troubleshooting</h2>
+
+    <h3>Point ordering matters</h3>
+    <p>The n-th point in each modality list must correspond to the same physical feature.
+       Use the <strong>Undo</strong> toolbar button if you accidentally select points out of order.</p>
+
+    <h3>At least 6 points for stable calibration</h3>
+    <p>While PnP requires only 4 points, 6–10 well-distributed correspondences
+       significantly improve accuracy. Aim for points at different depths and spread
+       across the image plane.</p>
+
+    <h3>Use Joint Optimization when all three modalities are available</h3>
+    <p><strong>Compute All</strong> minimizes the combined reprojection error across all
+       three pairs, producing more consistent results than sequential pairwise calibration.</p>
+
+    <h3>Auto Axis Alignment for LiDAR</h3>
+    <p>LiDAR sensors often use a Z-up coordinate convention while cameras use Z-forward.
+       Enable <strong>Auto Axis Alignment</strong> before computing if your point cloud
+       appears rotated 90° in the projection viewer.</p>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <p>Disable <strong>Auto Axis Alignment</strong> (or load a calibration) before
+         loading a pre-computed calibration JSON — the toggle is automatically disabled
+         when a calibration is loaded to avoid double-applying the basis transform.</p>
+    </div>
+
+    <h3>Video generation</h3>
+    <p>The projection viewers can generate videos from image and point cloud sequences.
+       Both directories must contain files with matching names (different extensions).
+       Sort order is alphabetical, so use zero-padded frame indices in filenames.</p>
+
+    <h3>Reinitialize vs Restart</h3>
+    <ul>
+      <li><strong>Restart</strong> — clean slate, all data is cleared.</li>
+      <li><strong>Reinitialize</strong> — saves the current session state to
+          <code>state_dict.json</code> and restarts, automatically reloading all files.</li>
+    </ul>
+
+    <h3>PyVista plotter does not open on Linux</h3>
+    <p>Ensure a display server (X11 or Wayland with XWayland) is available. Run with
+       <code>DISPLAY=:0</code> if needed. PyVista is intentionally run in a separate
+       process to avoid Qt/OpenGL context conflicts.</p>
+
+    <!-- Footer -->
+    <footer>
+      <p>TFKP-Cal v0.4 &mdash; Developed at
+         <a href="https://av.dfki.de/" target="_blank">DFKI Augmented Vision Group</a>
+         by <a href="https://av.dfki.de/members/jakkamsetty" target="_blank">Rahul Jakkamsetty</a> &mdash; December 2024 – August 2025 &mdash;
+         <a href='https://creativecommons.org/licenses/by-nc-sa/4.0/' target="_blank">CC BY-NC-SA 4.0</a>
+      </p>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+  // Highlight active nav link on scroll
+  const headings = document.querySelectorAll('main [id]');
+  const navLinks = document.querySelectorAll('nav a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`nav a[href="#${e.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  headings.forEach(h => observer.observe(h));
+</script>
+</body>
+</html>
