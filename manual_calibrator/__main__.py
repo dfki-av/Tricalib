@@ -1,7 +1,7 @@
 __author__ = "Rahul Jakkamsetty"
-__license__ = "MIT"
+__license__ = "CC BY-NC-SA 4.0"
 __doc__ = """
-A manual calibration tool for three modalities RGB, LiDAR and Event Images. Developed at DFKI 2025.
+A calibration tool for three modalities RGB, LiDAR and Event Images. Developed at DFKI 2025.
 """
 #python imports
 

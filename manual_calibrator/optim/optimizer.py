@@ -1,5 +1,5 @@
 __author__ = "Rahul Jakkamsetty"
-__license__ = "MIT"
+__license__ = "CC BY-NC-SA 4.0"
 __doc__ = """
 Minimization performed across the projection errors of three modalities. 
 Developed at DFKI in JULY-AUGUST 2025.

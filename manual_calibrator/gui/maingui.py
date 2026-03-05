@@ -1,7 +1,24 @@
 __author__ = "Rahul Jakkamsetty"
-__license__ = "MIT"
+__license__ = "CC BY-NC-SA 4.0"
 __doc__ = """
-A 2D-3D manual calibration tool from RGB Image and Corresponding Point Cloud. Developed at DFKI DEC-JAN 2024-25.
+TFKP-Cal - Primary GUI Module
+=======================================
+Provides the main application window (PrimaryWindow) for the Manual Calibrator tool,
+a 2D-3D extrinsic calibration utility for multi-modal sensor setups comprising:
+  - RGB camera
+  - LiDAR point cloud
+  - Event camera
+
+Key capabilities:
+  - Interactive point correspondence selection via right-click on 2D images and
+    3D point cloud viewer.
+  - PnP-based pairwise calibration (LiDAR↔RGB, LiDAR↔Event, RGB↔Event).
+  - Joint non-linear optimization over all three modality pairs simultaneously.
+  - Projection visualization with intensity/depth coloring and video generation.
+  - Reprojection error computation and display.
+  - Session state persistence (save/load full tool state to JSON).
+
+Developed at DFKI (German Research Center for AI), December 2024 – August 2025.
 """
 
 # python imports
@@ -35,11 +52,11 @@ from manual_calibrator.misc import image_to_pixmap, matrices_to_params
 
 
 class PrimaryWindow(QMainWindow):
-    """Main GUI for the Manual Calibrator application"""
+    """Main GUI for the TFKP-Cal application"""
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Manual Calibrator")
+        self.setWindowTitle("TFKP-Cal")
 
         self.setGeometry(100, 100, 1200, 800)
         self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))

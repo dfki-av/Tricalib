@@ -1,5 +1,5 @@
 __author__ = "Rahul Jakkamsetty"
-__license__ = "MIT"
+__license__ = "CC BY-NC-SA 4.0"
 __doc__ = """
 Few projection related functions. 
 Developed at DFKI in DEC-JAN 2024-25.

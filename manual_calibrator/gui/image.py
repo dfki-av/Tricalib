@@ -1,3 +1,25 @@
+__author__ = "Rahul Jakkamsetty"
+__license__ = "CC BY-NC-SA 4.0"
+__doc__ = """
+TFKP-Cal - Projection Viewer Windows
+===============================================
+Provides secondary windows for visualizing calibration results:
+
+  - :class:`ImageViewer` — overlays a projected LiDAR point cloud on an RGB image.
+    Supports intensity/depth colouring, adjustable alpha blending, per-axis depth
+    selection, and batch video generation from frame sequences.
+
+  - :class:`EventImageViewer` — projects the RGB image onto the event camera plane
+    using the computed extrinsic transformation. Also supports video generation.
+
+  - :class:`EventLidarViewer` — subclass of :class:`ImageViewer` that uses the
+    LiDAR→Event transformation instead of LiDAR→RGB.
+
+All viewers run as standalone Qt applications in separate subprocesses, spawned
+from the main window via :func:`~manual_calibrator.gui.maingui.launch_projection_window`.
+
+Developed at DFKI (German Research Center for AI), December 2024 – August 2025.
+"""
 
 # python imports
 import os

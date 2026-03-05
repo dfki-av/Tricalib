@@ -1,5 +1,5 @@
 __author__ = "Rahul Jakkamsetty"
-__license__ = "MIT"
+__license__ = "CC BY-NC-SA 4.0"
 __doc__ = """
 Few io utility functions. 
 Developed at DFKI in DEC-JAN 2024-25.
@@ -78,14 +78,22 @@ def load_yaml(file_path: str):
     return data
 
 
-def ucode_icon(unicode: str):
+def ucode_icon(unicode: str | list[str]):
+    """
+    Creates a QIcon from unicode character(s).
+    If multiple unicode strings are passed, merges them into a single icon.
+    """
+    unicode_list = unicode if isinstance(unicode, list) else [unicode]
+    
     img = QImage(100, 100, QImage.Format.Format_ARGB32)
     img.fill(Qt.GlobalColor.transparent)
 
     painter = QPainter(img)
     painter.setFont(QFont("Arial", 48))
     painter.setPen(Qt.GlobalColor.black)
-    painter.drawText(img.rect(), Qt.AlignmentFlag.AlignCenter, unicode)
+    
+    text = "".join(unicode_list)
+    painter.drawText(img.rect(), Qt.AlignmentFlag.AlignCenter, text)
     painter.end()
 
     pixmap = QPixmap.fromImage(img)

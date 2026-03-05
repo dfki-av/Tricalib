@@ -1,7 +1,20 @@
 __author__ = "Rahul Jakkamsetty"
-__license__ = "MIT"
+__license__ = "CC BY-NC-SA 4.0"
 __doc__ = """
+TFKP-Cal - Secondary GUI Module
+=========================================
+Provides auxiliary windows used by the TFKP-Cal:
 
+  - :class:`SecondaryWindow` — Event camera image viewer that runs in a
+    separate process. Accepts right-click point selection and communicates
+    selections back to the main window via a multiprocessing Pipe. Also
+    receives UNDO and LOAD commands from the main window.
+
+  - :class:`ReprojectionErrorWindow` — Modal dialog that displays the mean
+    absolute reprojection error (in pixels) for each sensor-pair combination
+    after calibration.
+
+Developed at DFKI (German Research Center for AI), December 2024 – August 2025.
 """
 
 # python imports

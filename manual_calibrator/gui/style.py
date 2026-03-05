@@ -1,7 +1,15 @@
 __author__ = "Rahul Jakkamsetty"
-__license__ = "MIT"
+__license__ = "CC BY-NC-SA 4.0"
 __doc__ = """
-Collection of styles for various GUI icons. Developed at DFKI JUL-AUG 2025.
+TFKP-Cal - GUI Style Components
+==========================================
+Provides custom Qt widget subclasses for a polished toolbar appearance:
+
+  - :class:`Switch` — a toggle switch that renders as a rounded pill with a
+    sliding knob and ON/OFF text labels, used for the Stereo Rectification
+    and Auto Axis Alignment toolbar controls.
+
+Developed at DFKI (German Research Center for AI), July – August 2025.
 """
 # python imports
 
