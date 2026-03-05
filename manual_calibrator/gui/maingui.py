@@ -576,7 +576,7 @@ class PrimaryWindow(QMainWindow):
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Load Intrinsics", "", "JSON File (*.json)")
-            if file_path is None:
+            if not file_path:
                 return
         data: dict = load_json(file_path)
         self.state_dict['intrinsics'] = file_path
@@ -592,7 +592,7 @@ class PrimaryWindow(QMainWindow):
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Load Pairwise Points", "", "JSON File (*.json)")
-            if file_path is None:
+            if not file_path:
                 return
 
         data = load_json(file_path)
@@ -616,7 +616,7 @@ class PrimaryWindow(QMainWindow):
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Load Extrinsics", "", "JSON File (*.json)")
-            if file_path is None:
+            if not file_path :
                 return
 
         self._extrinsic_data = load_json(file_path)
@@ -649,7 +649,7 @@ class PrimaryWindow(QMainWindow):
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Load Image", "", "Images (*.png *.jpg)")
-            if file_path is None:
+            if not file_path:
                 return
         self.state_dict['rgb_image'] = file_path
         self.image = cv2.imread(file_path)
@@ -665,7 +665,7 @@ class PrimaryWindow(QMainWindow):
 
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Load Event Image", "", "Event Images (*.png *.jpg)")
-            if file_path is None:
+            if not file_path:
                 return
         self.state_dict['event_image'] = file_path
         self.event_image = cv2.imread(file_path)
@@ -683,7 +683,7 @@ class PrimaryWindow(QMainWindow):
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Load Point Cloud", "", "Point Clouds (*.pcd)")
-            if file_path is None:
+            if not file_path:
                 return
         self.state_dict['point_cloud'] = file_path
         self.point_cloud = o3d.t.io.read_point_cloud(
