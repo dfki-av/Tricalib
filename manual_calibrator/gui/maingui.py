@@ -19,7 +19,7 @@ import pyvista as pv
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QMessageBox, QToolBar, QSizePolicy,
                              QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar)
 from PyQt6.QtCore import Qt, QPoint, QTimer, QSize, QProcess
-from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon, QAction
+from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QAction
 
 # internal imports
 from manual_calibrator.utils.io import (write_json, load_json, ucode_icon,
@@ -28,7 +28,8 @@ from manual_calibrator.utils.projection import normalize_pixels, compute_pnp_tra
 from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT, BASIS_MATRIX, DSEC_R_RECT_RGB
 from manual_calibrator.gui.image import ImageViewer, EventImageViewer, EventLidarViewer
 from manual_calibrator.gui.secgui import SecondaryWindow, ReprojectionErrorWindow
-from manual_calibrator.gui.style import Switch
+from manual_calibrator.gui.style import (Switch, DARK_STYLESHEET, LIGHT_STYLESHEET,
+                                         ICON_COLOR_DARK, ICON_COLOR_LIGHT, themed_icon)
 from manual_calibrator.optim.optimizer import optimize_calibration, reprojection_error
 from manual_calibrator.misc import image_to_pixmap, matrices_to_params
 
@@ -44,6 +45,7 @@ class PrimaryWindow(QMainWindow):
         self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
 
         # Initialize data structures
+        self._dark_mode = True
         self.auto_axis_alignment = False
         self.rotation_rectification = False
         self.image = None
@@ -131,133 +133,177 @@ class PrimaryWindow(QMainWindow):
 
         menu = self.menuBar()
         file_menu = menu.addMenu("&File")
-        file_menu.addAction(load_rgb)
+
+        # — Load Data —
+        load_data_menu = file_menu.addMenu(ucode_icon("\U0001F4E4"), "Load &Data")
+        load_data_menu.addAction(load_rgb)
+        load_data_menu.addAction(load_pc)
+        load_data_menu.addAction(load_evt)
+
         file_menu.addSeparator()
-        file_menu.addAction(load_pc)
-        file_menu.addSeparator()
-        file_menu.addAction(load_evt)
-        file_menu.addSeparator()
+
+        # — Configuration —
         file_menu.addAction(load_k)
+
         file_menu.addSeparator()
-        file_menu.addAction(load_pts)
+
+        # — Session (load) —
+        load_session_menu = file_menu.addMenu(ucode_icon("\U0001F4E4"), "Load Se&ssion")
+        load_session_menu.addAction(load_pts)
+        load_session_menu.addAction(load_calib)
+        load_session_menu.addAction(load_state)
+
         file_menu.addSeparator()
-        file_menu.addAction(load_calib)
-        file_menu.addSeparator()
-        file_menu.addAction(load_state)
-        file_menu.addSeparator()
-        file_menu.addAction(save_pts)
-        file_menu.addSeparator()
-        file_menu.addAction(save_calib)
-        file_menu.addSeparator()
-        file_menu.addAction(save_state)
+
+        # — Save —
+        save_menu = file_menu.addMenu(ucode_icon("\U0001F4BE"), "&Save")
+        save_menu.addAction(save_pts)
+        save_menu.addAction(save_calib)
+        save_menu.addAction(save_state)
+
 
         calib_menu = menu.addMenu("&Calibration")
 
-        compute_all = QAction(ucode_icon("\U0001F4BB"), "Compute all", self)
+        compute_all = QAction(ucode_icon("\U0001F4BB"), "Compute &All", self)
         compute_all.setStatusTip(
-            "Compute the Calibration among all modalities simultaneously.")
+            "Compute the calibration among all modalities simultaneously.")
         compute_all.triggered.connect(self.compute_all)
-        calib_menu.addAction(compute_all)
-        calib_menu.addSeparator()
 
-        project_all = QAction(ucode_icon("\U0001F52E"), "Project all", self)
+        project_all = QAction(ucode_icon("\U0001F52E"), "Project &All", self)
         project_all.setStatusTip(
-            "Projects all the modalities using calcualted calibration.")
+            "Project all modalities using the calculated calibration.")
         project_all.triggered.connect(self.project_all)
-        calib_menu.addAction(project_all)
-        calib_menu.addSeparator()
 
         compute_rgb_ev = QAction(ucode_icon("\U0001F4BB"),
                                  "Compute \U0001F4F7 vs. \U000026A1", self)
         compute_rgb_ev.setStatusTip(
-            "Compute the Calibration between RGB and Event camera")
+            "Compute the calibration between RGB and Event camera")
         compute_rgb_ev.triggered.connect(self.compute_evt_rgb_transform)
-        calib_menu.addAction(compute_rgb_ev)
 
-        calib_menu.addSeparator()
         project_rgb_evt = QAction(ucode_icon("\U0001F52E"),
                                   "Project \U0001F4F7 on \U000026A1", self)
         project_rgb_evt.setStatusTip(
-            "project the RGB on event data using calibration  and visualize")
+            "Project the RGB image onto the event camera plane and visualize")
         project_rgb_evt.triggered.connect(self.project_extrinsics_rgb_ev)
-        calib_menu.addAction(project_rgb_evt)
-
-        calib_menu.addSeparator()
 
         compute_rgb_pc = QAction(ucode_icon("\U0001F4BB"),
                                  "Compute \U0001F4F7 vs. \U0001F7E2", self)
         compute_rgb_pc.setStatusTip(
-            "Compute the Calibration between RGB and Point Cloud")
+            "Compute the calibration between RGB camera and LiDAR")
         compute_rgb_pc.triggered.connect(self.compute_pc_rgb_transform)
-        calib_menu.addAction(compute_rgb_pc)
-        calib_menu.addSeparator()
 
         project_pc_rgb = QAction(ucode_icon("\U0001F52E"),
                                  "Project \U0001F7E2 on \U0001F4F7", self)
         project_pc_rgb.setStatusTip(
-            "project the point cloud on RGB using calibration  and visualize")
+            "Project the LiDAR point cloud on the RGB image and visualize")
         project_pc_rgb.triggered.connect(self.project_extrinsics_pc_rgb)
-        calib_menu.addAction(project_pc_rgb)
-
-        calib_menu.addSeparator()
 
         compute_evt_pc = QAction(ucode_icon("\U0001F4BB"),
-                                 "&Compute \U000026A1 vs \U0001F7E2", self)
+                                 "Compute \U000026A1 vs. \U0001F7E2", self)
         compute_evt_pc.setStatusTip(
-            "Compute the Calibration between Event camera and Point Cloud")
+            "Compute the calibration between Event camera and LiDAR")
         compute_evt_pc.triggered.connect(self.compute_pc_evt_transform)
-        calib_menu.addAction(compute_evt_pc)
-        calib_menu.addSeparator()
 
         project_pc_evt = QAction(ucode_icon("\U0001F52E"),
-                                 "&Project \U0001F7E2  on \U000026A1", self)
+                                 "Project \U0001F7E2 on \U000026A1", self)
         project_pc_evt.setStatusTip(
-            "project the point cloud on Event image using calibration and visualize")
+            "Project the LiDAR point cloud on the Event image and visualize")
         project_pc_evt.triggered.connect(self.project_extrinsics_pc_evt)
-        calib_menu.addAction(project_pc_evt)
 
+        # Group 1 — All modalities
+        joint_menu = calib_menu.addMenu(ucode_icon("\U0001F4BB"), "&Joint (All)")
+        joint_menu.addAction(compute_all)
+        joint_menu.addSeparator()
+        joint_menu.addAction(project_all)
+
+        calib_menu.addSeparator()
+
+        # Group 2 — RGB ↔ Event
+        rgb_ev_menu = calib_menu.addMenu(ucode_icon("\U0001F4F7\U000026A1"), "RGB \u2194 Event")
+        rgb_ev_menu.addAction(compute_rgb_ev)
+        rgb_ev_menu.addSeparator()
+        rgb_ev_menu.addAction(project_rgb_evt)
+
+        calib_menu.addSeparator()
+
+        # Group 3 — RGB ↔ LiDAR
+        rgb_pc_menu = calib_menu.addMenu(ucode_icon("\U0001F4F7\U0001F7E2"), "RGB \u2194 LiDAR")
+        rgb_pc_menu.addAction(compute_rgb_pc)
+        rgb_pc_menu.addSeparator()
+        rgb_pc_menu.addAction(project_pc_rgb)
+
+        calib_menu.addSeparator()
+
+        # Group 4 — Event ↔ LiDAR
+        ev_pc_menu = calib_menu.addMenu(ucode_icon("\U000026A1\U0001F7E2 "), "Event \u2194 LiDAR")
+        ev_pc_menu.addAction(compute_evt_pc)
+        ev_pc_menu.addSeparator()
+        ev_pc_menu.addAction(project_pc_evt)
+
+        # ── Point Cloud Menu ───────────────────────────────────────────────────
         pc_menu = menu.addMenu("&Point Cloud")
         intensity = QAction(ucode_icon("\U0001F506"), "&Intensity Mode", self)
-        intensity.setStatusTip("Visualize the point cloud in intensity mode")
+        intensity.setStatusTip("Visualize the point cloud coloured by return intensity")
         intensity.triggered.connect(self.intensity)
         depth = QAction(ucode_icon("\U0001F39A"), "&Depth Mode", self)
         depth.triggered.connect(self.depth)
-        depth.setStatusTip("Visualize the point cloud in depth mode")
+        depth.setStatusTip("Visualize the point cloud coloured by depth")
 
         pc_menu.addAction(intensity)
         pc_menu.addSeparator()
         pc_menu.addAction(depth)
 
+        # ── Help Menu ──────────────────────────────────────────────────────────
+        # Group 1: Documentation
+        # Group 2: Restart / Reinitialize
         help_menu = menu.addMenu("&Help")
 
-        restart = QAction(ucode_icon("\U0001F501"),
-                          "Restart App", self)
-        restart.setStatusTip("Restart the Application")
+        docs_action = QAction(ucode_icon("\U0001F4D6"), "&Documentation", self)
+        docs_action.setStatusTip("Open the Manual Calibrator documentation in a browser")
+        docs_action.triggered.connect(self.open_docs)
+        help_menu.addAction(docs_action)
+
+        help_menu.addSeparator()
+
+        restart = QAction(ucode_icon("\U0001F501"), "Restart App", self)
+        restart.setStatusTip("Restart the application (clears all data)")
         restart.triggered.connect(self.confirm_restart)
         help_menu.addAction(restart)
-        help_menu.addSeparator()
-        reinit = QAction(ucode_icon("\U0000267B"),
-                         "Reinitialize", self)
-        reinit.setStatusTip("Restart the Application with same state")
+
+        reinit = QAction(ucode_icon("\U0000267B"), "Reinitialize", self)
+        reinit.setStatusTip("Save current session state, then restart and restore it")
         reinit.triggered.connect(self.reinitialize)
         help_menu.addAction(reinit)
+
+        theme_corner = QWidget()
+        theme_corner_layout = QHBoxLayout(theme_corner)
+        theme_corner_layout.setContentsMargins(4, 0, 8, 0)
+        theme_corner_layout.setSpacing(4)
+        theme_label = QLabel("Dark Mode:")
+        self.theme_switch = Switch()
+        self.theme_switch.setChecked(self._dark_mode)
+        self.theme_switch.stateChanged.connect(self.toggle_theme)
+        self.theme_switch.setStatusTip("Toggle between dark and light mode")
+        theme_corner_layout.addWidget(theme_label)
+        theme_corner_layout.addWidget(self.theme_switch)
+        menu.setCornerWidget(theme_corner, Qt.Corner.TopRightCorner)
 
         toolbar = QToolBar('ToolBar')
         toolbar.setIconSize(QSize(24, 24))
         toolbar.setOrientation(Qt.Orientation.Vertical)
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, toolbar)
-        undo_action = QAction(QIcon('./data/icons/undo.svg'), "Undo", self)
-        undo_action.setStatusTip(
+        self.undo_action = QAction(themed_icon('./data/icons/undo.svg', ICON_COLOR_DARK), "Undo", self)
+        self.undo_action.setStatusTip(
             "Undoes selection of points across RGB, LiDAR and Event camera")
-        undo_action.triggered.connect(self.undo)
-        toolbar.addAction(undo_action)
+        self.undo_action.triggered.connect(self.undo)
+        toolbar.addAction(self.undo_action)
         toolbar.addSeparator()
 
-        error_action = QAction(QIcon('./data/icons/metrics.svg'), "Reprojection Error", self)
-        error_action.setStatusTip(
+        self.error_action = QAction(themed_icon('./data/icons/metrics.svg', ICON_COLOR_DARK), "Reprojection Error", self)
+        self.error_action.setStatusTip(
             "Calculates reprojections error for selected points")
-        error_action.triggered.connect(self.compute_rp_e)
-        toolbar.addAction(error_action)
+        self.error_action.triggered.connect(self.compute_rp_e)
+        toolbar.addAction(self.error_action)
         
         
 
@@ -265,6 +311,7 @@ class PrimaryWindow(QMainWindow):
         horiz_toolbar.setIconSize(QSize(24, 24))
         horiz_toolbar.setOrientation(Qt.Orientation.Horizontal)
         self.addToolBar(horiz_toolbar)
+
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding,
                              QSizePolicy.Policy.Preferred)
@@ -338,7 +385,8 @@ class PrimaryWindow(QMainWindow):
                              kwargs=dict(window=ImageViewer, image=self.base_image.copy(),
                                          point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
                                          intrinsics=self.rgb_camera_matrix, axis_alignment=axis_aligment,
-                                         rect_matrix=rect_matrix, path_list=self.state_dict))
+                                         rect_matrix=rect_matrix, path_list=self.state_dict,
+                                         dark_mode=self._dark_mode))
 
         self.pv_processes.append(process)
         process.start()
@@ -359,8 +407,8 @@ class PrimaryWindow(QMainWindow):
                              kwargs=dict(window=EventLidarViewer, image=self.event_image,
                                          point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
                                          intrinsics=self.evt_camera_matrix, axis_alignment=axis_alignment,
-                                         rect_matrix=rect_matrix, path_list=self.state_dict
-                                         ))
+                                         rect_matrix=rect_matrix, path_list=self.state_dict,
+                                         dark_mode=self._dark_mode))
 
         self.pv_processes.append(process)
         process.start()
@@ -377,7 +425,8 @@ class PrimaryWindow(QMainWindow):
                              kwargs=dict(window=EventImageViewer, evt_image=self.event_image,
                                          rgb_image=self.image, extrinsics_data=self._extrinsic_data,
                                          K_evt=self.evt_camera_matrix, K_rgb=self.rgb_camera_matrix,
-                                         rect_matrices=rect_matrices, path_list=self.state_dict))
+                                         rect_matrices=rect_matrices, path_list=self.state_dict,
+                                         dark_mode=self._dark_mode))
 
         self.pv_processes.append(process)
         process.start()
@@ -493,6 +542,17 @@ class PrimaryWindow(QMainWindow):
         else:
             self.auto_axis_alignment = False
 
+    def toggle_theme(self, state):
+        self._dark_mode = (state == Qt.CheckState.Checked.value)
+        if self._dark_mode:
+            QApplication.instance().setStyleSheet(DARK_STYLESHEET)
+            icon_color = ICON_COLOR_DARK
+        else:
+            QApplication.instance().setStyleSheet(LIGHT_STYLESHEET)
+            icon_color = ICON_COLOR_LIGHT
+        self.undo_action.setIcon(themed_icon('./data/icons/undo.svg', icon_color))
+        self.error_action.setIcon(themed_icon('./data/icons/metrics.svg', icon_color))
+
     def load_intrinsics(self, file_path=None):
         if file_path == 'pass':
             return
@@ -593,7 +653,7 @@ class PrimaryWindow(QMainWindow):
         self.state_dict['event_image'] = file_path
         self.event_image = cv2.imread(file_path)
         process = mp.Process(target=run_event_data_visualizer, args=(
-            self.child_conn_event, self.event_image, file_path))
+            self.child_conn_event, self.event_image, file_path, self._dark_mode))
         self.pv_processes.append(process)
         process.start()
         self.start_ev_timer()
@@ -730,10 +790,10 @@ class PrimaryWindow(QMainWindow):
 
         params = matrices_to_params(self._extrinsic_data)
         errors_dict = reprojection_error(params, self.selected_3d_points, self.selected_2d_points, self.selected_ev_points,
-                                   self.rgb_camera_matrix, self.evt_camera_matrix,
-                                   unification=unification, rect_matrics=rect_matrices, return_errors=True)
+                                         self.rgb_camera_matrix, self.evt_camera_matrix,
+                                         unification=unification, rect_matrics=rect_matrices, return_errors=True)
         for k in errors_dict:
-            errors_dict[k] = np.round(np.abs(errors_dict[k].mean()), 4)      
+            errors_dict[k] = np.round(np.abs(errors_dict[k].mean()), 4)
         dlg = ReprojectionErrorWindow(errors_dict, self)
         dlg.show()
 
@@ -876,8 +936,9 @@ def run_pyvista_visualizer(cloud, scalar, cmap, conn):
     plotter.show()
 
 
-def run_event_data_visualizer(conn, ev_img, ev_img_path):
+def run_event_data_visualizer(conn, ev_img, ev_img_path, dark_mode=True):
     app = QApplication([])
+    app.setStyleSheet(DARK_STYLESHEET if dark_mode else LIGHT_STYLESHEET)
     sec_wdw = SecondaryWindow(conn, ev_img)
     sec_wdw.image_label.setStatusTip(os.path.basename(ev_img_path))
     sec_wdw.show()
@@ -887,6 +948,8 @@ def run_event_data_visualizer(conn, ev_img, ev_img_path):
 
 def launch_projection_window(**kwargs):
     app = QApplication([])
+    dark_mode = kwargs.pop('dark_mode', True)
+    app.setStyleSheet(DARK_STYLESHEET if dark_mode else LIGHT_STYLESHEET)
     window = kwargs.pop('window')
     proj_wdw = window(**kwargs)
     proj_wdw.show()
@@ -896,6 +959,7 @@ def launch_projection_window(**kwargs):
 def main():
     mp.set_start_method('spawn')
     app = QApplication(sys.argv)
+    app.setStyleSheet(DARK_STYLESHEET)
     locale.setlocale(locale.LC_NUMERIC, 'C')
     main_window = PrimaryWindow()
     main_window.show()
