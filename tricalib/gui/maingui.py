@@ -33,10 +33,11 @@ import numpy as np
 import cv2
 import open3d as o3d
 import pyvista as pv
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QMessageBox, QToolBar, QSizePolicy,
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QMessageBox, QToolBar,
+                              QSizePolicy, QDockWidget, QPlainTextEdit, QWidget, QPushButton,
                              QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar)
 from PyQt6.QtCore import Qt, QPoint, QTimer, QSize, QProcess
-from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QAction
+from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QAction, QFont
 
 # internal imports
 from tricalib.utils.io import (write_json, load_json, ucode_icon,
@@ -379,8 +380,92 @@ class PrimaryWindow(QMainWindow):
 
         # layout.setSpacing(5)
         # layout.addStretch()
+        self._build_results_panel()
         central_widget.setLayout(layout)
         self.setStatusBar(QStatusBar(self))
+
+
+    def _build_results_panel(self):
+        """Creates and docks the persistent extrinsics results panel."""
+        self._results_dock = QDockWidget("Calibration Results", self)
+        self._results_dock.setAllowedAreas(
+            Qt.DockWidgetArea.RightDockWidgetArea |
+            Qt.DockWidgetArea.BottomDockWidgetArea
+        )
+        self._results_dock.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QDockWidget.DockWidgetFeature.DockWidgetFloatable
+        )
+
+        container = QWidget()
+        vbox = QVBoxLayout(container)
+        vbox.setContentsMargins(8, 8, 8, 8)
+        vbox.setSpacing(6)
+
+        # Scrollable text display
+        self._results_text = QPlainTextEdit()
+        self._results_text.setReadOnly(True)
+        font = QFont("Monospace")
+        font.setStyleHint(QFont.StyleHint.TypeWriter)
+        font.setPointSize(9)
+        self._results_text.setFont(font)
+        self._results_text.setPlaceholderText(
+            "No extrinsics computed yet.\n\n"
+            "Run any Calibration → Compute action\n"
+            "to see results here."
+        )
+        vbox.addWidget(self._results_text)
+
+        # Copy to clipboard button
+        copy_btn = QPushButton("📋  Copy to Clipboard")
+        copy_btn.setToolTip("Copy all extrinsic matrices to the clipboard")
+        copy_btn.clicked.connect(
+            lambda: QApplication.clipboard().setText(self._results_text.toPlainText())
+        )
+        vbox.addWidget(copy_btn)
+
+        self._results_dock.setWidget(container)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._results_dock)
+        self._results_dock.setMinimumWidth(280)
+
+    def _update_results_panel(self):
+        """Refreshes the results panel with the latest extrinsic data."""
+        if not self._extrinsic_data:
+            return
+
+        lines = []
+        # Keys we care about, with friendly labels
+        transform_keys = [
+            ("T_lidar_to_rgb", "📷  LiDAR → RGB"),
+            ("T_lidar_to_evt", "⚡  LiDAR → Event"),
+            ("T_rgb_to_evt",   "📷→⚡  RGB → Event"),
+        ]
+
+        for key, label in transform_keys:
+            if key not in self._extrinsic_data:
+                continue
+            T = np.array(self._extrinsic_data[key])
+            R = T[:3, :3]
+            t = T[:3, 3]
+
+            lines.append(f"{'─'*36}")
+            lines.append(f"{label}")
+            lines.append(f"{'─'*36}")
+            lines.append("Rotation (R):")
+            for row in R:
+                lines.append(f"  [{row[0]:+.6f}  {row[1]:+.6f}  {row[2]:+.6f}]")
+            lines.append("Translation (t) [m]:")
+            lines.append(f"  [{t[0]:+.6f}  {t[1]:+.6f}  {t[2]:+.6f}]")
+            lines.append("")
+
+        if not lines:
+            return
+
+        self._results_text.setPlainText("\n".join(lines))
+
+        # Make the dock visible if it was hidden
+        self._results_dock.setVisible(True)
+        self._results_dock.raise_()
 
     def open_docs(self):
         """GUI button function. Opens the HTML doc of TriCalib in default browser."""
@@ -857,6 +942,7 @@ class PrimaryWindow(QMainWindow):
             print(T_rgb_evt)
         else:
             print("Error: Select at least 4 point correspondences.")
+        self._update_results_panel()
 
     def compute_pc_evt_transform(self):
 
@@ -881,6 +967,7 @@ class PrimaryWindow(QMainWindow):
                 dict(T_lidar_to_evt=T_lidar_to_evt))
             self._extrinsic_data.update(evt_lidar_T_data)
             self.switch.setEnabled(False)
+        self._update_results_panel()
 
     def compute_pc_rgb_transform(self):
         """Computes the transformation matrix from the selected correspondences."""
@@ -906,6 +993,7 @@ class PrimaryWindow(QMainWindow):
                 {"T_lidar_to_rgb": T_lidar_to_cam})
             self._extrinsic_data.update(rgb_lidar_T_data)
             self.switch.setEnabled(False)
+        self._update_results_panel()
 
     def compute_all(self):
         """Computes the transfromation matrices of all the modalities simultaneoulsy."""
@@ -928,6 +1016,7 @@ class PrimaryWindow(QMainWindow):
                                           points_event=self.selected_ev_points,
                                           K_rgb=self.rgb_camera_matrix, K_ev=self.evt_camera_matrix, unification=basis, rect_matrices=rect_matrices)
         self._extrinsic_data = serialize_dict(extrinsics)
+        self._update_results_panel()
 
     def assert_loaded(self, flags: list = None):
         if flags is None:
