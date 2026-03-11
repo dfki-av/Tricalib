@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="../data/icons/start_logo.webp">
   <title>TriCalib — Documentation</title>
   <style>
     /* ── Reset & Base ─────────────────────────────────────────── */
@@ -353,8 +354,7 @@
     <div class="hero" id="overview">
       <h1>TriCalib</h1>
       <p class="subtitle">
-        An interactive 2D–3D extrinsic calibration tool for multi-modal sensor
-        setups — RGB camera, LiDAR point cloud, and event camera — developed at
+        An Interactive Target-Free and Keypoint-Based Extrinsic Calibration Tool for Tri-Modal Sensor Suites — developed at
         <strong>DFKI</strong> (German Research Center for Artificial Intelligence).
       </p>
       <div class="badge-row">
@@ -396,9 +396,8 @@
 
     <!-- ── Installation ── -->
     <h2 id="installation">Installation</h2>
-    <pre>git clone https://github.com/your-org/manual_calibrator
-cd manual_calibrator
-pip install -r requirements.txt
+    <pre>git clone https://github.com/your-org/tricalib #TODO
+cd tricalib
 pip install -e .</pre>
 
     <h3>Dependencies</h3>
@@ -418,10 +417,8 @@ pip install -e .</pre>
 
     <!-- ── Quick Start ── -->
     <h2 id="quickstart">Quick Start</h2>
-    <pre>python -m manual_calibrator</pre>
-    <p>Or from Python:</p>
-    <pre>from manual_calibrator.gui.maingui import main
-main()</pre>
+    <pre>python -m tricalib</pre>
+
 
     <!-- ── Workflow ── -->
     <h2 id="workflow">Step-by-step Workflow</h2>
@@ -659,21 +656,21 @@ main()</pre>
     <!-- ── Module Reference ── -->
     <h2 id="api">Module Reference</h2>
 
-    <h3>manual_calibrator.gui.maingui</h3>
+    <h3>tricalib.gui.maingui</h3>
     <p>Contains <code>PrimaryWindow</code> — the main application window — and
        module-level process-entry functions <code>run_pyvista_visualizer</code>,
        <code>run_event_data_visualizer</code>, and <code>launch_projection_window</code>.</p>
 
-    <h3>manual_calibrator.gui.secgui</h3>
+    <h3>tricalib.gui.secgui</h3>
     <p><code>SecondaryWindow</code> (event camera viewer) and
        <code>ReprojectionErrorWindow</code> (metrics dialog).</p>
 
-    <h3>manual_calibrator.gui.image</h3>
+    <h3>tricalib.gui.image</h3>
     <p><code>ImageViewer</code> (LiDAR→RGB projection),
        <code>EventImageViewer</code> (RGB→Event projection), and
        <code>EventLidarViewer</code> (LiDAR→Event projection).</p>
 
-    <h3>manual_calibrator.optim.optimizer</h3>
+    <h3>tricalib.optim.optimizer</h3>
     <table>
       <thead><tr><th>Function</th><th>Description</th></tr></thead>
       <tbody>
@@ -683,7 +680,7 @@ main()</pre>
       </tbody>
     </table>
 
-    <h3>manual_calibrator.utils.projection</h3>
+    <h3>tricalib.utils.projection</h3>
     <table>
       <thead><tr><th>Function</th><th>Description</th></tr></thead>
       <tbody>
@@ -696,14 +693,14 @@ main()</pre>
       </tbody>
     </table>
 
-    <h3>manual_calibrator.utils.io</h3>
+    <h3>tricalib.utils.io</h3>
     <p>File I/O helpers: <code>load_json</code>, <code>write_json</code>,
        <code>load_yaml</code>, <code>read_image</code>, <code>save_image</code>,
        <code>read_point_cloud</code>, <code>load_point_cloud</code>,
        <code>ucode_icon</code>, <code>fxfycxcy_to_matrix</code>,
        <code>serialize_dict</code>.</p>
 
-    <h3>manual_calibrator.misc</h3>
+    <h3>tricalib.misc</h3>
     <p>Math utilities: <code>normalize_quat</code>, <code>quat_to_matrix</code>,
        <code>compose_T</code>, <code>decompose_T</code>, <code>image_to_pixmap</code>,
        <code>matrices_to_params</code>, <code>geodesic_distance_from_rotm</code>,
