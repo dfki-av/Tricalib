@@ -33,7 +33,7 @@ QWidget {
     background-color: #1c2128;
     color: #cdd9e5;
     font-family: "Segoe UI", "Inter", "Arial", sans-serif;
-    font-size: 13px;
+    font-size: 10pt;
     selection-background-color: #1d6b6b;
     selection-color: #ffffff;
 }
@@ -127,7 +127,7 @@ QToolButton:pressed {
 QStatusBar {
     background-color: #2da8a8;
     color: #ffffff;
-    font-size: 12px;
+    font-size: 9pt;
     border: none;
 }
 QStatusBar::item {
@@ -285,7 +285,7 @@ QWidget {
     background-color: #f6f8fa;
     color: #1f2328;
     font-family: "Segoe UI", "Inter", "Arial", sans-serif;
-    font-size: 13px;
+    font-size: 10pt;
     selection-background-color: #b8e8e8;
     selection-color: #1f2328;
 }
@@ -379,7 +379,7 @@ QToolButton:pressed {
 QStatusBar {
     background-color: #2da8a8;
     color: #ffffff;
-    font-size: 12px;
+    font-size: 9pt;
     border: none;
 }
 QStatusBar::item {
