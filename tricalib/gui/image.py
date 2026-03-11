@@ -1,7 +1,7 @@
 __author__ = "Rahul Jakkamsetty"
 __license__ = "CC BY-NC-SA 4.0"
 __doc__ = """
-TFKP-Cal - Projection Viewer Windows
+TriCalib - Projection Viewer Windows
 ===============================================
 Provides secondary windows for visualizing calibration results:
 
@@ -16,7 +16,7 @@ Provides secondary windows for visualizing calibration results:
     LiDAR→Event transformation instead of LiDAR→RGB.
 
 All viewers run as standalone Qt applications in separate subprocesses, spawned
-from the main window via :func:`~manual_calibrator.gui.maingui.launch_projection_window`.
+from the main window via :func:`~tricalib.gui.maingui.launch_projection_window`.
 
 Developed at DFKI (German Research Center for AI), December 2024 – August 2025.
 """

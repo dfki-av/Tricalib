@@ -1,9 +1,9 @@
 __author__ = "Rahul Jakkamsetty"
 __license__ = "CC BY-NC-SA 4.0"
 __doc__ = """
-TFKP-Cal - Secondary GUI Module
+TriCalib - Secondary GUI Module
 =========================================
-Provides auxiliary windows used by the TFKP-Cal:
+Provides auxiliary windows used by the TriCalib:
 
   - :class:`SecondaryWindow` — Event camera image viewer that runs in a
     separate process. Accepts right-click point selection and communicates

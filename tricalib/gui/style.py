@@ -1,7 +1,7 @@
 __author__ = "Rahul Jakkamsetty"
 __license__ = "CC BY-NC-SA 4.0"
 __doc__ = """
-TFKP-Cal - GUI Style Components
+TriCalib - GUI Style Components
 ==========================================
 Provides custom Qt widget subclasses for a polished toolbar appearance:
 

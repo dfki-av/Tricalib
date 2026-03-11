@@ -17,7 +17,7 @@ Now install this repo using the following command in edit mode
 ```bash
 pip install -e .
 ```
-The manual_calibrator should be installed now.
+The tricalib should be installed now.
 
 ### Usage
 After installation run the following command to launch the GUI.

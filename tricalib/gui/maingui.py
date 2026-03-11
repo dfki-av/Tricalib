@@ -1,9 +1,9 @@
 __author__ = "Rahul Jakkamsetty"
 __license__ = "CC BY-NC-SA 4.0"
 __doc__ = """
-TFKP-Cal - Primary GUI Module
+TriCalib - Primary GUI Module
 =======================================
-Provides the main application window (PrimaryWindow) for the Manual Calibrator tool,
+Provides the main application window (PrimaryWindow) for the TriCalib tool,
 a 2D-3D extrinsic calibration utility for multi-modal sensor setups comprising:
   - RGB camera
   - LiDAR point cloud
@@ -52,7 +52,7 @@ from tricalib.misc import image_to_pixmap, matrices_to_params
 
 
 class PrimaryWindow(QMainWindow):
-    """Main GUI for the TFKP-Cal application"""
+    """Main GUI for the TriCalib application"""
 
     def __init__(self):
         super().__init__()
@@ -284,7 +284,7 @@ class PrimaryWindow(QMainWindow):
 
         docs_action = QAction(ucode_icon("\U0001F4D6"), "&Documentation", self)
         docs_action.setStatusTip(
-            "Open the Manual Calibrator documentation in a browser")
+            "Open the TriCalib documentation in a browser")
         docs_action.triggered.connect(self.open_docs)
         help_menu.addAction(docs_action)
 
@@ -383,7 +383,7 @@ class PrimaryWindow(QMainWindow):
         self.setStatusBar(QStatusBar(self))
 
     def open_docs(self):
-        """GUI button function. Opens the HTML doc of Manual calibrator in default browser."""
+        """GUI button function. Opens the HTML doc of TriCalib in default browser."""
         url = './docs/doc.html'
         abs_url = os.path.abspath(url)
         webbrowser.open(f"file://{abs_url}")
