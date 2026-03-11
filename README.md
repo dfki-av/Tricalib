@@ -7,11 +7,11 @@
 ### Installation
 Clone the repo using the below command.
 ```bash
-git clone git@pc-4501.kl.dfki.de:jakkamsetty/manual_calibrator.git
+git clone git@pc-4501.kl.dfki.de:jakkamsetty/tricalib.git
 ```
 then 
 ```bash
-cd manual_calibrator
+cd tricalib
 ```
 Now install this repo using the following command in edit mode
 ```bash
