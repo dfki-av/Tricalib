@@ -65,6 +65,7 @@ class PrimaryWindow(QMainWindow):
         self._dark_mode = True
         self.auto_axis_alignment = False
         self.rotation_rectification = False
+        self._intrinsics_loaded = False
         self.image = None
         self.point_cloud = None
         self.selected_2d_points = []
@@ -152,7 +153,8 @@ class PrimaryWindow(QMainWindow):
         file_menu = menu.addMenu("&File")
 
         # — Load Data —
-        load_data_menu = file_menu.addMenu(ucode_icon("\U0001F4E4"), "Load &Data")
+        load_data_menu = file_menu.addMenu(
+            ucode_icon("\U0001F4E4"), "Load &Data")
         load_data_menu.addAction(load_rgb)
         load_data_menu.addAction(load_pc)
         load_data_menu.addAction(load_evt)
@@ -165,7 +167,8 @@ class PrimaryWindow(QMainWindow):
         file_menu.addSeparator()
 
         # — Session (load) —
-        load_session_menu = file_menu.addMenu(ucode_icon("\U0001F4E4"), "Load Se&ssion")
+        load_session_menu = file_menu.addMenu(
+            ucode_icon("\U0001F4E4"), "Load Se&ssion")
         load_session_menu.addAction(load_pts)
         load_session_menu.addAction(load_calib)
         load_session_menu.addAction(load_state)
@@ -177,7 +180,6 @@ class PrimaryWindow(QMainWindow):
         save_menu.addAction(save_pts)
         save_menu.addAction(save_calib)
         save_menu.addAction(save_state)
-
 
         calib_menu = menu.addMenu("&Calibration")
 
@@ -228,7 +230,8 @@ class PrimaryWindow(QMainWindow):
         project_pc_evt.triggered.connect(self.project_extrinsics_pc_evt)
 
         # Group 1 — All modalities
-        joint_menu = calib_menu.addMenu(ucode_icon("\U0001F4BB"), "&Joint (All)")
+        joint_menu = calib_menu.addMenu(
+            ucode_icon("\U0001F4BB"), "&Joint (All)")
         joint_menu.addAction(compute_all)
         joint_menu.addSeparator()
         joint_menu.addAction(project_all)
@@ -236,7 +239,8 @@ class PrimaryWindow(QMainWindow):
         calib_menu.addSeparator()
 
         # Group 2 — RGB ↔ Event
-        rgb_ev_menu = calib_menu.addMenu(ucode_icon("\U0001F4F7\U000026A1"), "RGB \u2194 Event")
+        rgb_ev_menu = calib_menu.addMenu(ucode_icon(
+            "\U0001F4F7\U000026A1"), "RGB \u2194 Event")
         rgb_ev_menu.addAction(compute_rgb_ev)
         rgb_ev_menu.addSeparator()
         rgb_ev_menu.addAction(project_rgb_evt)
@@ -244,7 +248,8 @@ class PrimaryWindow(QMainWindow):
         calib_menu.addSeparator()
 
         # Group 3 — RGB ↔ LiDAR
-        rgb_pc_menu = calib_menu.addMenu(ucode_icon("\U0001F4F7\U0001F7E2"), "RGB \u2194 LiDAR")
+        rgb_pc_menu = calib_menu.addMenu(ucode_icon(
+            "\U0001F4F7\U0001F7E2"), "RGB \u2194 LiDAR")
         rgb_pc_menu.addAction(compute_rgb_pc)
         rgb_pc_menu.addSeparator()
         rgb_pc_menu.addAction(project_pc_rgb)
@@ -252,7 +257,8 @@ class PrimaryWindow(QMainWindow):
         calib_menu.addSeparator()
 
         # Group 4 — Event ↔ LiDAR
-        ev_pc_menu = calib_menu.addMenu(ucode_icon("\U000026A1\U0001F7E2 "), "Event \u2194 LiDAR")
+        ev_pc_menu = calib_menu.addMenu(ucode_icon(
+            "\U000026A1\U0001F7E2 "), "Event \u2194 LiDAR")
         ev_pc_menu.addAction(compute_evt_pc)
         ev_pc_menu.addSeparator()
         ev_pc_menu.addAction(project_pc_evt)
@@ -260,7 +266,8 @@ class PrimaryWindow(QMainWindow):
         # ── Point Cloud Menu ───────────────────────────────────────────────────
         pc_menu = menu.addMenu("&Point Cloud")
         intensity = QAction(ucode_icon("\U0001F506"), "&Intensity Mode", self)
-        intensity.setStatusTip("Visualize the point cloud coloured by return intensity")
+        intensity.setStatusTip(
+            "Visualize the point cloud coloured by return intensity")
         intensity.triggered.connect(self.intensity)
         depth = QAction(ucode_icon("\U0001F39A"), "&Depth Mode", self)
         depth.triggered.connect(self.depth)
@@ -276,7 +283,8 @@ class PrimaryWindow(QMainWindow):
         help_menu = menu.addMenu("&Help")
 
         docs_action = QAction(ucode_icon("\U0001F4D6"), "&Documentation", self)
-        docs_action.setStatusTip("Open the Manual Calibrator documentation in a browser")
+        docs_action.setStatusTip(
+            "Open the Manual Calibrator documentation in a browser")
         docs_action.triggered.connect(self.open_docs)
         help_menu.addAction(docs_action)
 
@@ -288,7 +296,8 @@ class PrimaryWindow(QMainWindow):
         help_menu.addAction(restart)
 
         reinit = QAction(ucode_icon("\U0000267B"), "Reinitialize", self)
-        reinit.setStatusTip("Save current session state, then restart and restore it")
+        reinit.setStatusTip(
+            "Save current session state, then restart and restore it")
         reinit.triggered.connect(self.reinitialize)
         help_menu.addAction(reinit)
 
@@ -309,20 +318,20 @@ class PrimaryWindow(QMainWindow):
         toolbar.setIconSize(QSize(24, 24))
         toolbar.setOrientation(Qt.Orientation.Vertical)
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, toolbar)
-        self.undo_action = QAction(themed_icon('./data/icons/undo.svg', ICON_COLOR_DARK), "Undo", self)
+        self.undo_action = QAction(themed_icon(
+            './data/icons/undo.svg', ICON_COLOR_DARK), "Undo", self)
         self.undo_action.setStatusTip(
             "Undoes selection of points across RGB, LiDAR and Event camera")
         self.undo_action.triggered.connect(self.undo)
         toolbar.addAction(self.undo_action)
         toolbar.addSeparator()
 
-        self.error_action = QAction(themed_icon('./data/icons/metrics.svg', ICON_COLOR_DARK), "Reprojection Error", self)
+        self.error_action = QAction(themed_icon(
+            './data/icons/metrics.svg', ICON_COLOR_DARK), "Reprojection Error", self)
         self.error_action.setStatusTip(
             "Calculates reprojections error for selected points")
         self.error_action.triggered.connect(self.compute_rp_e)
         toolbar.addAction(self.error_action)
-        
-        
 
         horiz_toolbar = QToolBar("Horizon Toolbar")
         horiz_toolbar.setIconSize(QSize(24, 24))
@@ -567,8 +576,10 @@ class PrimaryWindow(QMainWindow):
         else:
             QApplication.instance().setStyleSheet(LIGHT_STYLESHEET)
             icon_color = ICON_COLOR_LIGHT
-        self.undo_action.setIcon(themed_icon('./data/icons/undo.svg', icon_color))
-        self.error_action.setIcon(themed_icon('./data/icons/metrics.svg', icon_color))
+        self.undo_action.setIcon(themed_icon(
+            './data/icons/undo.svg', icon_color))
+        self.error_action.setIcon(themed_icon(
+            './data/icons/metrics.svg', icon_color))
 
     def load_intrinsics(self, file_path=None):
         if file_path == 'pass':
@@ -584,6 +595,7 @@ class PrimaryWindow(QMainWindow):
             data.get('event_camera_intrinsic'))
         self.rgb_camera_matrix = fxfycxcy_to_matrix(
             data.get('rgb_camera_intrinsic'))
+        self._intrinsics_loaded = True
 
     def load_pnp_points(self, file_path=None):
         """GUI button function. Loads the correspondence points saved on the disk"""
@@ -616,7 +628,7 @@ class PrimaryWindow(QMainWindow):
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Load Extrinsics", "", "JSON File (*.json)")
-            if not file_path :
+            if not file_path:
                 return
 
         self._extrinsic_data = load_json(file_path)
@@ -792,6 +804,8 @@ class PrimaryWindow(QMainWindow):
             self.selected_ev_points.append(point)
 
     def compute_rp_e(self):
+        if not self.assert_loaded():
+            return
 
         if self.auto_axis_alignment:
             unification = BASIS_MATRIX
@@ -815,6 +829,10 @@ class PrimaryWindow(QMainWindow):
         dlg.show()
 
     def compute_evt_rgb_transform(self):
+
+        if not self.assert_loaded(flags=['event_image', 'image']):
+            return
+
         if len(self.selected_2d_points) >= 4 and len(self.selected_ev_points) >= 4:
             points_rgb = np.array(self.selected_2d_points, dtype=np.float32)
             points_evt = np.array(self.selected_ev_points, dtype=np.float32)
@@ -851,6 +869,8 @@ class PrimaryWindow(QMainWindow):
             basis = BASIS_MATRIX
         else:
             basis = None
+        if not self.assert_loaded(flags=['pc', 'event_image']):
+            return
         output = compute_pnp_transform(self.selected_ev_points,
                                        self.selected_3d_points,
                                        self.evt_camera_matrix, basis, rect)
@@ -874,7 +894,8 @@ class PrimaryWindow(QMainWindow):
             basis = BASIS_MATRIX
         else:
             basis = None
-
+        if not self.assert_loaded(flags=['pc', 'image']):
+            return
         output = compute_pnp_transform(self.selected_2d_points,
                                        self.selected_3d_points,
                                        self.rgb_camera_matrix, basis, rect)
@@ -899,12 +920,32 @@ class PrimaryWindow(QMainWindow):
             basis = BASIS_MATRIX
         else:
             basis = None
+        if not self.assert_loaded():
+            return
 
         extrinsics = optimize_calibration(points_lidar=self.selected_3d_points,
                                           points_rgb=self.selected_2d_points,
                                           points_event=self.selected_ev_points,
                                           K_rgb=self.rgb_camera_matrix, K_ev=self.evt_camera_matrix, unification=basis, rect_matrices=rect_matrices)
         self._extrinsic_data = serialize_dict(extrinsics)
+
+    def assert_loaded(self, flags: list = None):
+        if flags is None:
+            flags = ['image', 'event_image', 'pc']
+        if self.image is None and 'image' in flags:
+            QMessageBox.critical(self, "Error RGB", "RGB Image not loaded")
+            return False
+        if not hasattr(self, 'event_image') and 'event_image' in flags:
+            QMessageBox.critical(self, "Error Event", "Event Image not loaded")
+            return False
+        if self.point_cloud is None and 'pc' in flags:
+            QMessageBox.critical(self, "Error PC", "Point cloud not loaded")
+            return False
+        if not self._intrinsics_loaded:
+            QMessageBox.critical(self, 'Error Intrinsics',
+                                 'Intrinsics not loaded.')
+            return False
+        return True
 
     def closeEvent(self, event):
         """Ensure PyVista process is closed when GUI closes."""

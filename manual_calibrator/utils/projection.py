@@ -10,10 +10,12 @@ from typing import Optional
 # third-party imports
 import numpy as np
 import cv2
+from PyQt6.QtWidgets import QMessageBox
 
 # internal imports
 from manual_calibrator.utils.constants import (CAMERA4_C2_DISTORTION, CAMERA4_C2_KMATRIX, BASIS_MATRIX,
                                                DSEC_R_RECT_EVENT, DSEC_R_RECT_RGB, DSEC_T_GT)
+
 
 
 def undistort_fisheye(image, return_newk=False):
@@ -120,7 +122,7 @@ def project_rgb_to_event(points_rgb, K_rgb, K_ev, extrinsics, rect_matrices):
     return points_event
 
 
-def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.ndarray = None, rect_mat: np.ndarray = None):
+def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.ndarray = None, rect_mat: np.ndarray = None, parent=None):
     """
     Computes a transformation matrix between the lidar sensor and camera sensor.
 
@@ -158,8 +160,9 @@ def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.nda
             return T_lidar_to_cam, um
         else:
             print("Error: Unable to compute transformation.")
+            QMessageBox.critical(parent, 'Computation Error', "Unable to compute transformation. Please adjust correspondences.")
     else:
-        print("Error: Select at least 4 point correspondences.")
+        QMessageBox.critical(parent, "Error", "Select at least 4 point correspondences.")
     return None
 
 
