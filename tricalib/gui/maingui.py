@@ -35,7 +35,8 @@ import open3d as o3d
 import pyvista as pv
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QMessageBox, QToolBar,
                               QSizePolicy, QDockWidget, QPlainTextEdit, QWidget, QPushButton,
-                             QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar)
+                             QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar,
+                             QTableWidget, QTableWidgetItem, QHeaderView)
 from PyQt6.QtCore import Qt, QPoint, QTimer, QSize, QProcess
 from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QAction, QFont
 
@@ -73,6 +74,7 @@ class PrimaryWindow(QMainWindow):
         self.selected_3d_points = []
         self.selected_ev_points = []
         self._extrinsic_data = dict()
+        self._points_editing = False
         self.base_image = None
         self.parent_conn_lidar, self.child_conn_lidar = mp.Pipe()
         self.parent_conn_event, self.child_conn_event = mp.Pipe()
@@ -381,6 +383,9 @@ class PrimaryWindow(QMainWindow):
         # layout.setSpacing(5)
         # layout.addStretch()
         self._build_results_panel()
+        self._build_points_panel()
+        # Right dock spans full height; bottom dock sits to the left of it
+        self.setCorner(Qt.Corner.BottomRightCorner, Qt.DockWidgetArea.RightDockWidgetArea)
         central_widget.setLayout(layout)
         self.setStatusBar(QStatusBar(self))
 
@@ -466,6 +471,116 @@ class PrimaryWindow(QMainWindow):
         # Make the dock visible if it was hidden
         self._results_dock.setVisible(True)
         self._results_dock.raise_()
+
+    def _build_points_panel(self):
+        """Creates and docks the selected-points table panel."""
+        self._points_dock = QDockWidget("Selected Points", self)
+        self._points_dock.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas)
+        self._points_dock.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QDockWidget.DockWidgetFeature.DockWidgetFloatable
+        )
+
+        container = QWidget()
+        vbox = QVBoxLayout(container)
+        vbox.setContentsMargins(8, 8, 8, 8)
+        vbox.setSpacing(6)
+
+        # 7 columns: #, 2D-x, 2D-y, 3D-x, 3D-y, 3D-z, EV-x, EV-y
+        self._points_table = QTableWidget(0, 8)
+        self._points_table.setHorizontalHeaderLabels(
+            ["#", "RGB u [px]", "RGB v [px]", "LiDAR X [m]", "LiDAR Y [m]", "LiDAR Z [m]", "EV u [px]", "EV v [px]"]
+        )
+        self._points_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self._points_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._points_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._points_table.verticalHeader().setVisible(False)
+        self._points_table.itemChanged.connect(self._on_point_cell_changed)
+        vbox.addWidget(self._points_table)
+
+        self._edit_btn = QPushButton("Edit Points")
+        self._edit_btn.setCheckable(True)
+        self._edit_btn.toggled.connect(self._toggle_points_edit_mode)
+        vbox.addWidget(self._edit_btn)
+
+        self._points_dock.setWidget(container)
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self._points_dock)
+        self._points_dock.setMinimumHeight(160)
+
+    def _update_points_panel(self):
+        """Refreshes the points table with the current selected points."""
+        self._points_table.blockSignals(True)
+        n = max(len(self.selected_2d_points),
+                len(self.selected_3d_points),
+                len(self.selected_ev_points))
+        self._points_table.setRowCount(n)
+
+        def cell(value):
+            item = QTableWidgetItem(value)
+            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            return item
+
+        for i in range(n):
+            self._points_table.setItem(i, 0, cell(f'p{i}'))
+
+            if i < len(self.selected_2d_points):
+                p = self.selected_2d_points[i]
+                self._points_table.setItem(i, 1, cell(f"{p[0]}"))
+                self._points_table.setItem(i, 2, cell(f"{p[1]}"))
+
+            if i < len(self.selected_3d_points):
+                p = self.selected_3d_points[i]
+                self._points_table.setItem(i, 3, cell(f"{p[0]:.4f}"))
+                self._points_table.setItem(i, 4, cell(f"{p[1]:.4f}"))
+                self._points_table.setItem(i, 5, cell(f"{p[2]:.4f}"))
+
+            if i < len(self.selected_ev_points):
+                p = self.selected_ev_points[i]
+                self._points_table.setItem(i, 6, cell(f"{p[0]}"))
+                self._points_table.setItem(i, 7, cell(f"{p[1]}"))
+
+        self._points_table.blockSignals(False)
+
+    def _toggle_points_edit_mode(self, checked):
+        self._points_editing = checked
+        trigger = (QTableWidget.EditTrigger.DoubleClicked
+                   if checked
+                   else QTableWidget.EditTrigger.NoEditTriggers)
+        self._points_table.setEditTriggers(trigger)
+        self._edit_btn.setText("Done Editing" if checked else "Edit Points")
+
+    def _on_point_cell_changed(self, item):
+        if not self._points_editing:
+            return
+        self._points_table.blockSignals(True)
+        row, col = item.row(), item.column()
+        try:
+            val = float(item.text())
+        except ValueError:
+            self._update_points_panel()
+            self._points_table.blockSignals(False)
+            return
+
+        if col in (1, 2) and row < len(self.selected_2d_points):
+            p = list(self.selected_2d_points[row])
+            p[col - 1] = int(val)
+            self.selected_2d_points[row] = tuple(p)
+            self.draw_points_on_image(self.selected_2d_points, self.base_image)
+
+        elif col in (3, 4, 5) and row < len(self.selected_3d_points):
+            p = list(self.selected_3d_points[row])
+            p[col - 3] = val
+            self.selected_3d_points[row] = p
+            if hasattr(self, 'parent_conn_lidar'):
+                self.parent_conn_lidar.send(("UPDATE", self.selected_3d_points))
+
+        elif col in (6, 7) and row < len(self.selected_ev_points):
+            p = list(self.selected_ev_points[row])
+            p[col - 6] = int(val)
+            self.selected_ev_points[row] = tuple(p)
+            self.parent_conn_event.send(("UPDATE", self.selected_ev_points))
+
+        self._points_table.blockSignals(False)
 
     def open_docs(self):
         """GUI button function. Opens the HTML doc of TriCalib in default browser."""
@@ -573,6 +688,7 @@ class PrimaryWindow(QMainWindow):
                     self.selected_2d_points.append((img_x, img_y))
                     self.draw_circle(QPoint(img_x, img_y),
                                      len(self.selected_2d_points)-1)
+                    self._update_points_panel()
 
                 else:
                     print("Click is outside the image bounds.")
@@ -632,14 +748,18 @@ class PrimaryWindow(QMainWindow):
 
         if self.selected_3d_points:
             self.selected_3d_points.pop()
+            self.parent_conn_lidar.send(("UPDATE", self.selected_3d_points))
 
         if self.selected_ev_points:
             self.selected_ev_points.pop()
             self.parent_conn_event.send(("UNDO",))
 
-        print('Info: Remaining 2D points: ', self.selected_2d_points)
-        print('Info: Remaining 3D points: ', self.selected_3d_points)
-        print('Info: Remaining EV points: ', self.selected_ev_points)
+        self._update_points_panel()
+        self.statusBar().showMessage(
+            f"Undo — 2D: {len(self.selected_2d_points)} pts | "
+            f"3D: {len(self.selected_3d_points)} pts | "
+            f"EV: {len(self.selected_ev_points)} pts"
+        )
 
     def toggle_rotation_rectification(self, state):
         if state == Qt.CheckState.Checked.value:
@@ -700,9 +820,11 @@ class PrimaryWindow(QMainWindow):
                 self.draw_points_on_image(self.selected_2d_points)
         if 'lidar_points' in data:
             self.selected_3d_points.extend(data['lidar_points'])
+            self.parent_conn_lidar.send(("UPDATE", self.selected_3d_points))
         if 'event_points' in data:
             self.selected_ev_points.extend(data['event_points'])
             self.parent_conn_event.send(("LOAD", self.selected_ev_points))
+        self._update_points_panel()
 
     def load_extrinsics(self, file_path=None):
         """GUI button function. Loads the extrinsics file stored on the disk."""
@@ -878,15 +1000,15 @@ class PrimaryWindow(QMainWindow):
     def pc_poll(self):
         while self.parent_conn_lidar.poll():
             point = self.parent_conn_lidar.recv()
-            print("Selected 3D point:", point)
             self.selected_3d_points.append(point)
+            self._update_points_panel()
 
     def ev_poll(self):
         """gets the point from event image viewer at this timer event."""
         while self.parent_conn_event.poll():
             point = self.parent_conn_event.recv()
-            print("Selected EV point:", point)
             self.selected_ev_points.append(point)
+            self._update_points_panel()
 
     def compute_rp_e(self):
         if not self.assert_loaded():
@@ -1070,16 +1192,54 @@ class PrimaryWindow(QMainWindow):
 
 def run_pyvista_visualizer(cloud, scalar, cmap, conn):
     """separate function to launch on different process so that visualizer runs on a different process. Needed for linux platforms."""
+    point_actors = []   # list of (sphere_actor, label_actor) for each selected point
+    picked_points = []  # local mirror of selected_3d_points
+
+    def _redraw_all():
+        for sa, la in point_actors:
+            plotter.remove_actor(sa)
+            plotter.remove_actor(la)
+        point_actors.clear()
+        for i, pt in enumerate(picked_points):
+            sa = plotter.add_mesh(
+                pv.Sphere(radius=0.05, center=pt),
+                color="yellow", pickable=False)
+            la = plotter.add_point_labels(
+                [pt], [f"P{i}"],
+                font_size=12, text_color="black",
+                shape=None, always_visible=True)
+            point_actors.append((sa, la))
+        plotter.render()
+
     def point_picker_callback(picked_point, picker):
-        conn.send(picked_point.tolist())
+        pt = picked_point.tolist()
+        picked_points.append(pt)
+        conn.send(pt)
+        _redraw_all()
+
+    def poll_pipe(step):
+        while conn.poll():
+            msg = conn.recv()
+            if isinstance(msg, tuple) and msg[0] == "UPDATE":
+                picked_points.clear()
+                picked_points.extend(msg[1])
+                _redraw_all()
 
     plotter = pv.Plotter()
     plotter.add_axes_at_origin()
     plotter.add_mesh(cloud, scalars=scalar, cmap=cmap,
                      point_size=2, render_points_as_spheres=False, pickable=True)
-
     plotter.enable_point_picking(
         callback=point_picker_callback, show_message=True, use_picker=True)
+
+    _timer_created = [False]
+
+    def _setup_timer(pl):
+        if not _timer_created[0]:
+            _timer_created[0] = True
+            pl.add_timer_event(max_steps=10_000_000, duration=200, callback=poll_pipe)
+
+    plotter.add_on_render_callback(_setup_timer)
     plotter.show()
 
 

@@ -160,6 +160,9 @@ class SecondaryWindow(QMainWindow):
                     self.selected_2d_points.extend(msg[1])
                     for i, point in enumerate(self.selected_2d_points):
                         self.draw_circle(QPoint(*point), i)
+                if command == "UPDATE":
+                    self.selected_2d_points = list(msg[1])
+                    self.draw_points_on_image(self.selected_2d_points, self.base_image)
 
 
 class ReprojectionErrorWindow(QDialog):
