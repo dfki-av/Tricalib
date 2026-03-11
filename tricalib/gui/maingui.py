@@ -56,7 +56,7 @@ class PrimaryWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("TFKP-Cal")
+        self.setWindowTitle("TriCalib")
 
         self.setGeometry(100, 100, 1200, 800)
         self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
