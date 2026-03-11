@@ -721,6 +721,9 @@ class PrimaryWindow(QMainWindow):
 
     def depth(self):
         """GUI button function. Activates depth mode visualization of point cloud."""
+        output = self.assert_loaded(['pc'])
+        if not output:
+            return 
         points = self.point_cloud.point.positions.numpy()
         cloud = pv.PolyData(points)
         distances = np.min(np.abs(points), axis=1)
@@ -730,7 +733,9 @@ class PrimaryWindow(QMainWindow):
 
     def intensity(self):
         """GUI button function. Activates intensity mode visualization of point cloud."""
-
+        output = self.assert_loaded(['pc'])
+        if not output:
+            return 
         points = self.point_cloud.point.positions.numpy()
         intensity = self.point_cloud.point.intensity.numpy()
         intensity_norm = intensity/np.max(intensity)
