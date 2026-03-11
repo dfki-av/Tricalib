@@ -34,9 +34,9 @@ from PyQt6.QtGui import QPixmap, QImage, QIcon
 
 
 # internal imports
-from manual_calibrator.utils.projection import project_points, visualize_projection, visualize_rgb_event
-from manual_calibrator.utils.io import read_image, read_point_cloud, ucode_icon
-from manual_calibrator.misc import decompose_T
+from tricalib.utils.projection import project_points, visualize_projection, visualize_rgb_event
+from tricalib.utils.io import read_image, read_point_cloud, ucode_icon
+from tricalib.misc import decompose_T
 
 
 class ImageViewer(QMainWindow):

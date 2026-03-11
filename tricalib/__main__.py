@@ -7,7 +7,7 @@ A calibration tool for three modalities RGB, LiDAR and Event Images. Developed a
 
 # third-party imports
 # internal imports
-from manual_calibrator.gui.maingui import main
+from tricalib.gui.maingui import main
 
 
 

@@ -20,7 +20,7 @@ dependency_links = [x.strip().replace('git+', '') for x in all_reqs if x.startsw
 
 # Call the setup.py
 setup(
-    name='manual_calibrator',
+    name='tricalib',
     version=0.4,
     author='Rahul Jakkamsetty',
     license='internal',

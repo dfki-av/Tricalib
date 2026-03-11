@@ -13,7 +13,7 @@ import cv2
 from PyQt6.QtWidgets import QMessageBox
 
 # internal imports
-from manual_calibrator.utils.constants import (CAMERA4_C2_DISTORTION, CAMERA4_C2_KMATRIX, BASIS_MATRIX,
+from tricalib.utils.constants import (CAMERA4_C2_DISTORTION, CAMERA4_C2_KMATRIX, BASIS_MATRIX,
                                                DSEC_R_RECT_EVENT, DSEC_R_RECT_RGB, DSEC_T_GT)
 
 

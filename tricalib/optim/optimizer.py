@@ -15,9 +15,9 @@ from scipy.optimize import least_squares
 
 
 # internal imports
-from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT, DSEC_R_RECT_RGB
-from manual_calibrator.utils.projection import project_points, project_rgb_to_event
-from manual_calibrator.misc import compose_T, quat_to_matrix
+from tricalib.utils.constants import DSEC_R_RECT_EVENT, DSEC_R_RECT_RGB
+from tricalib.utils.projection import project_points, project_rgb_to_event
+from tricalib.misc import compose_T, quat_to_matrix
 
 
 def parameters_to_matrices(params: np.ndarray) -> dict:

@@ -29,7 +29,7 @@ from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
 
 # internal imports
-from manual_calibrator.misc import image_to_pixmap
+from tricalib.misc import image_to_pixmap
 
 
 class SecondaryWindow(QMainWindow):

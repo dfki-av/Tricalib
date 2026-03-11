@@ -39,16 +39,16 @@ from PyQt6.QtCore import Qt, QPoint, QTimer, QSize, QProcess
 from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QAction
 
 # internal imports
-from manual_calibrator.utils.io import (write_json, load_json, ucode_icon,
+from tricalib.utils.io import (write_json, load_json, ucode_icon,
                                         fxfycxcy_to_matrix, serialize_dict)
-from manual_calibrator.utils.projection import normalize_pixels, compute_pnp_transform
-from manual_calibrator.utils.constants import DSEC_R_RECT_EVENT, BASIS_MATRIX, DSEC_R_RECT_RGB
-from manual_calibrator.gui.image import ImageViewer, EventImageViewer, EventLidarViewer
-from manual_calibrator.gui.secgui import SecondaryWindow, ReprojectionErrorWindow
-from manual_calibrator.gui.style import (Switch, DARK_STYLESHEET, LIGHT_STYLESHEET,
+from tricalib.utils.projection import normalize_pixels, compute_pnp_transform
+from tricalib.utils.constants import DSEC_R_RECT_EVENT, BASIS_MATRIX, DSEC_R_RECT_RGB
+from tricalib.gui.image import ImageViewer, EventImageViewer, EventLidarViewer
+from tricalib.gui.secgui import SecondaryWindow, ReprojectionErrorWindow
+from tricalib.gui.style import (Switch, DARK_STYLESHEET, LIGHT_STYLESHEET,
                                          ICON_COLOR_DARK, ICON_COLOR_LIGHT, themed_icon)
-from manual_calibrator.optim.optimizer import optimize_calibration, reprojection_error
-from manual_calibrator.misc import image_to_pixmap, matrices_to_params
+from tricalib.optim.optimizer import optimize_calibration, reprojection_error
+from tricalib.misc import image_to_pixmap, matrices_to_params
 
 
 class PrimaryWindow(QMainWindow):
