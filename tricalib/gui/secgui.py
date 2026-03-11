@@ -103,7 +103,7 @@ class SecondaryWindow(QMainWindow):
 
                 # Ensure the click is within bounds
                 if 0 <= img_x < pixmap_width and 0 <= img_y < pixmap_height:
-                    print(f"Exact image pixel coordinates: ({img_x}, {img_y})")
+                    self.statusBar().showMessage(f"Selected: ({img_x}, {img_y})")
                     point = (img_x, img_y)
                     self.selected_2d_points.append(point)
                     self.conn.send(point)
@@ -111,9 +111,9 @@ class SecondaryWindow(QMainWindow):
                                      len(self.selected_2d_points)-1)
 
                 else:
-                    print("Click is outside the image bounds.")
+                    self.statusBar().showMessage("Click is outside the image bounds.")
             else:
-                print("No image loaded.")
+                self.statusBar().showMessage("No image loaded.")
 
     def draw_circle(self, position: QPoint, p_index: int):
         """highlights the selected point with numbering in the image viewer.

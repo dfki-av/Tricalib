@@ -151,15 +151,11 @@ def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.nda
             T = np.eye(4)
             T[:3, :3] = R@rect_mat
             T[:3, 3] = tvec.flatten()
-            print("Extrinsic Transformation Matrix:")
-            print(T)
-
             um = np.eye(4)
             um[:3, :3] = U
             T_lidar_to_cam = T@np.linalg.inv(um)
             return T_lidar_to_cam, um
         else:
-            print("Error: Unable to compute transformation.")
             QMessageBox.critical(parent, 'Computation Error', "Unable to compute transformation. Please adjust correspondences.")
     else:
         QMessageBox.critical(parent, "Error", "Select at least 4 point correspondences.")

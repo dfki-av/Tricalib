@@ -226,6 +226,7 @@ class ImageViewer(QMainWindow):
 
         av = self.alpha_button.value() / 100
 
+        failed_frames = []
         with imageio.get_writer(file_path, fps=fps) as writer:
             for i, path in enumerate(files, start=1):
                 if progress.wasCanceled():
@@ -251,14 +252,18 @@ class ImageViewer(QMainWindow):
                     )
                     writer.append_data(proj_img)
                 except Exception as e:
-                    print(f"Error processing {path}: {e}")
+                    failed_frames.append(f"{path}: {e}")
 
                 progress.setValue(i)
-                QApplication.processEvents()  
+                QApplication.processEvents()
 
         progress.close()
 
-        QMessageBox.information(self, "Done", "✅ Video generation complete!")
+        if failed_frames:
+            QMessageBox.warning(self, "Processing Errors",
+                                f"Failed to process {len(failed_frames)} frame(s):\n" + "\n".join(failed_frames))
+        else:
+            QMessageBox.information(self, "Done", "✅ Video generation complete!")
 
 
 class EventImageViewer(QMainWindow):
@@ -364,6 +369,7 @@ class EventImageViewer(QMainWindow):
         progress.setAutoReset(True)
         progress.setMinimumWidth(300)
 
+        failed_frames = []
         with imageio.get_writer(file_path, fps=fps) as writer:
             for i, path in enumerate(files, start=1):
                 if progress.wasCanceled():
@@ -378,17 +384,21 @@ class EventImageViewer(QMainWindow):
                     evt_image = read_image(evt_path)
                     proj_img = visualize_rgb_event(evt_image, rgb_image,
                                          self.K_evt, self.K_rgb, self.extrinsics, self.rect_matrices)
-              
+
                     writer.append_data(proj_img)
                 except Exception as e:
-                    print(f"Error processing {path}: {e}")
+                    failed_frames.append(f"{path}: {e}")
 
                 progress.setValue(i)
-                QApplication.processEvents()  
+                QApplication.processEvents()
 
         progress.close()
 
-        QMessageBox.information(self, "Done", "✅ Video generation complete!")
+        if failed_frames:
+            QMessageBox.warning(self, "Processing Errors",
+                                f"Failed to process {len(failed_frames)} frame(s):\n" + "\n".join(failed_frames))
+        else:
+            QMessageBox.information(self, "Done", "✅ Video generation complete!")
 
 
 class EventLidarViewer(ImageViewer):

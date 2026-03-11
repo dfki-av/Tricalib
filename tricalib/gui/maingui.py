@@ -684,16 +684,16 @@ class PrimaryWindow(QMainWindow):
 
                 # Ensure the click is within bounds
                 if 0 <= img_x < pixmap_width and 0 <= img_y < pixmap_height:
-                    print(f"Exact image pixel coordinates: ({img_x}, {img_y})")
+                    self.statusBar().showMessage(f"Selected: ({img_x}, {img_y})")
                     self.selected_2d_points.append((img_x, img_y))
                     self.draw_circle(QPoint(img_x, img_y),
                                      len(self.selected_2d_points)-1)
                     self._update_points_panel()
 
                 else:
-                    print("Click is outside the image bounds.")
+                    self.statusBar().showMessage("Click is outside the image bounds.")
             else:
-                print("No image loaded.")
+                self.statusBar().showMessage("No image loaded.")
 
     def draw_circle(self, position: QPoint, p_index: int):
         """highlights the selected point with numbering in the image viewer.
@@ -846,17 +846,15 @@ class PrimaryWindow(QMainWindow):
                 self._extrinsic_data['K_evt'] = self.evt_camera_matrix.tolist(
                 )
             except Exception as e:
-                print(e)
-                print('Possibly the event camera intrisics are not loaded.')
-                pass
+                QMessageBox.warning(self, "Intrinsics Warning",
+                                    f"Event camera intrinsics not loaded:\n{e}")
         if 'K_rgb' not in self._extrinsic_data:
             try:
                 self._extrinsic_data['K_rgb'] = self.rgb_camera_matrix.tolist(
                 )
             except Exception as e:
-                print(e)
-                print('Possibly the rgb camera intrinsics are not loaded')
-                pass
+                QMessageBox.warning(self, "Intrinsics Warning",
+                                    f"RGB camera intrinsics not loaded:\n{e}")
         self.switch.setEnabled(False)
 
     def load_image(self, file_path=None):
@@ -1041,29 +1039,32 @@ class PrimaryWindow(QMainWindow):
             return
 
         if len(self.selected_2d_points) >= 4 and len(self.selected_ev_points) >= 4:
-            points_rgb = np.array(self.selected_2d_points, dtype=np.float32)
-            points_evt = np.array(self.selected_ev_points, dtype=np.float32)
-            points_rgb_norm = normalize_pixels(
-                points_rgb, self.rgb_camera_matrix)
-            points_evt_norm = normalize_pixels(
-                points_evt, self.evt_camera_matrix)
-            E, mask = cv2.findEssentialMat(
-                points_rgb_norm, points_evt_norm, method=cv2.RANSAC, prob=0.999, threshold=1e-3, maxIters=10000)
+            try:
+                points_rgb = np.array(self.selected_2d_points, dtype=np.float32)
+                points_evt = np.array(self.selected_ev_points, dtype=np.float32)
+                points_rgb_norm = normalize_pixels(
+                    points_rgb, self.rgb_camera_matrix)
+                points_evt_norm = normalize_pixels(
+                    points_evt, self.evt_camera_matrix)
+                E, mask = cv2.findEssentialMat(
+                    points_rgb_norm, points_evt_norm, method=cv2.RANSAC, prob=0.999, threshold=1e-3, maxIters=10000)
 
-            out = cv2.recoverPose(
-                E=E, points1=points_rgb_norm, points2=points_evt_norm, mask=mask)
-            T_rgb_evt = np.eye(4)
-            T_rgb_evt[:3, :3] = out[1]
-            T_rgb_evt[:3, 3] = out[2].flatten()
+                out = cv2.recoverPose(
+                    E=E, points1=points_rgb_norm, points2=points_evt_norm, mask=mask)
+                T_rgb_evt = np.eye(4)
+                T_rgb_evt[:3, :3] = out[1]
+                T_rgb_evt[:3, 3] = out[2].flatten()
 
-            rgb_evt_T_data = dict(T_rgb_to_evt=T_rgb_evt)
-            rgb_evt_T_data = serialize_dict(rgb_evt_T_data)
+                rgb_evt_T_data = dict(T_rgb_to_evt=T_rgb_evt)
+                rgb_evt_T_data = serialize_dict(rgb_evt_T_data)
 
-            self._extrinsic_data.update(rgb_evt_T_data)
-            print('RGB to Event Transformation Matrix:')
-            print(T_rgb_evt)
+                self._extrinsic_data.update(rgb_evt_T_data)
+            except Exception as e:
+                QMessageBox.critical(self, "Calibration Error",
+                                     f"Failed to compute RGB\u2194Event transformation:\n{e}")
+                return
         else:
-            print("Error: Select at least 4 point correspondences.")
+            QMessageBox.critical(self, "Error", "Select at least 4 point correspondences.")
         self._update_results_panel()
 
     def compute_pc_evt_transform(self):
