@@ -18,7 +18,7 @@ Key capabilities:
   - Reprojection error computation and display.
   - Session state persistence (save/load full tool state to JSON).
 
-Developed at DFKI (German Research Center for AI), December 2024 – August 2025.
+Developed at DFKI (German Research Center for AI), December 2024 – March 2026.
 """
 
 # python imports
@@ -40,16 +40,14 @@ from PyQt6.QtCore import Qt, QPoint, QTimer, QSize, QProcess
 from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QAction, QFont
 
 # internal imports
-from tricalib.utils.io import ucode_icon      
-from tricalib.utils.constants import DSEC_R_RECT_EVENT, BASIS_MATRIX, DSEC_R_RECT_RGB
-from tricalib.gui.image import ImageViewer, EventImageViewer, EventLidarViewer
+from tricalib.utils.io import ucode_icon, write_json      
 from tricalib.gui.style import (Switch, DARK_STYLESHEET, LIGHT_STYLESHEET,
                                          ICON_COLOR_DARK, ICON_COLOR_LIGHT, themed_icon)
 from tricalib.misc import image_to_pixmap
-from tricalib.gui.workers import run_pyvista_visualizer, launch_projection_window
-from tricalib.gui.mixins import IOMixin, CalibrationMixin
+from tricalib.gui.workers import run_pyvista_visualizer
+from tricalib.gui.mixins import IOMixin, CalibrationMixin, ProjectionMixin
 
-class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin):
+class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
     """Main GUI for the TriCalib application"""
 
     def __init__(self):
@@ -583,75 +581,6 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin):
         url = './docs/doc.html'
         abs_url = os.path.abspath(url)
         webbrowser.open(f"file://{abs_url}")
-
-    def project_all(self):
-        """GUI button function. Opens multiple windows dispalying the projected images of all modalities."""
-        self.project_extrinsics_pc_evt()
-        self.project_extrinsics_pc_rgb()
-        self.project_extrinsics_rgb_ev()
-
-    def project_extrinsics_pc_rgb(self):
-        """GUI button function.Opens another windows displaying the projected pointcloud on image."""
-
-        if self.rotation_rectification:
-            rect_matrix = DSEC_R_RECT_RGB
-        else:
-            rect_matrix = np.eye(3)
-
-        if self.auto_axis_alignment:
-            axis_aligment = BASIS_MATRIX
-        else:
-            axis_aligment = None
-
-        process = mp.Process(target=launch_projection_window,
-                             kwargs=dict(window=ImageViewer, image=self.base_image.copy(),
-                                         point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
-                                         intrinsics=self.rgb_camera_matrix, axis_alignment=axis_aligment,
-                                         rect_matrix=rect_matrix, path_list=self.state_dict,
-                                         dark_mode=self._dark_mode))
-
-        self.pv_processes.append(process)
-        process.start()
-
-    def project_extrinsics_pc_evt(self):
-
-        if self.rotation_rectification:
-            rect_matrix = DSEC_R_RECT_EVENT
-        else:
-            rect_matrix = np.eye(3)
-
-        if self.auto_axis_alignment:
-            axis_alignment = BASIS_MATRIX
-        else:
-            axis_alignment = None
-
-        process = mp.Process(target=launch_projection_window,
-                             kwargs=dict(window=EventLidarViewer, image=self.event_image,
-                                         point_cloud=self.point_cloud, extrinsics=self._extrinsic_data,
-                                         intrinsics=self.evt_camera_matrix, axis_alignment=axis_alignment,
-                                         rect_matrix=rect_matrix, path_list=self.state_dict,
-                                         dark_mode=self._dark_mode))
-
-        self.pv_processes.append(process)
-        process.start()
-
-    def project_extrinsics_rgb_ev(self):
-
-        if self.rotation_rectification:
-            rect_matrices = dict(rgb=DSEC_R_RECT_RGB,
-                                 event=DSEC_R_RECT_EVENT)
-        else:
-            rect_matrices = None
-
-        process = mp.Process(target=launch_projection_window,
-                             kwargs=dict(window=EventImageViewer, evt_image=self.event_image,
-                                         rgb_image=self.image, extrinsics_data=self._extrinsic_data,
-                                         K_evt=self.evt_camera_matrix, K_rgb=self.rgb_camera_matrix,
-                                         rect_matrices=rect_matrices, path_list=self.state_dict,
-                                         dark_mode=self._dark_mode))
-
-        self.pv_processes.append(process)
-        process.start()
 
     def mousePressEvent(self, event):
         """Capture mouse click events in the image viewer."""
