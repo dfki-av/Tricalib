@@ -412,7 +412,9 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         self._results_text.setPlaceholderText(
             "No extrinsics computed yet.\n\n"
             "Run any Calibration → Compute action\n"
-            "to see results here."
+            "to see results here.\n\n"
+            "Tip: For DSEC, enable Auto Axis\n"
+            "Alignment for Joint Optimization"
         )
         vbox.addWidget(self._results_text)
 
