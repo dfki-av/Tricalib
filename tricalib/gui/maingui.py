@@ -1040,7 +1040,7 @@ class PrimaryWindow(QMainWindow):
 
     def compute_evt_rgb_transform(self):
 
-        if not self.assert_loaded(flags=['event_image', 'image']):
+        if not self.assert_loaded(flags=['event_image', 'image', 'intrinsics']):
             return
 
         if len(self.selected_2d_points) >= 4 and len(self.selected_ev_points) >= 4:
@@ -1083,7 +1083,7 @@ class PrimaryWindow(QMainWindow):
             basis = BASIS_MATRIX
         else:
             basis = None
-        if not self.assert_loaded(flags=['pc', 'event_image']):
+        if not self.assert_loaded(flags=['pc', 'event_image', 'intrinsics']):
             return
         output = compute_pnp_transform(self.selected_ev_points,
                                        self.selected_3d_points,
@@ -1148,7 +1148,7 @@ class PrimaryWindow(QMainWindow):
 
     def assert_loaded(self, flags: list = None):
         if flags is None:
-            flags = ['image', 'event_image', 'pc']
+            flags = ['image', 'event_image', 'pc', 'intrinsics']
         if self.image is None and 'image' in flags:
             QMessageBox.critical(self, "Error RGB", "RGB Image not loaded")
             return False
@@ -1158,7 +1158,7 @@ class PrimaryWindow(QMainWindow):
         if self.point_cloud is None and 'pc' in flags:
             QMessageBox.critical(self, "Error PC", "Point cloud not loaded")
             return False
-        if not self._intrinsics_loaded:
+        if not self._intrinsics_loaded and 'intrinsics' in flags:
             QMessageBox.critical(self, 'Error Intrinsics',
                                  'Intrinsics not loaded.')
             return False
