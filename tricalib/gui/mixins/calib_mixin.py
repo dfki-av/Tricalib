@@ -121,7 +121,7 @@ class CalibrationMixin:
             basis = BASIS_MATRIX
         else:
             basis = None
-        if not self.assert_loaded(flags=['pc', 'image']):
+        if not self.assert_loaded(flags=['pc', 'image','intrinsics']):
             return
         output = compute_pnp_transform(self.selected_2d_points,
                                        self.selected_3d_points,
