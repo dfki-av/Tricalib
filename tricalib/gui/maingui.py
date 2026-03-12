@@ -370,6 +370,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
 
         self.image_label = QLabel("2D Image Viewer")
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         layout.addWidget(self.image_label)
         self.image_label.setMouseTracking(True)
         self.image_label.setStatusTip("2D Image Viewer")
@@ -592,23 +593,21 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
             img_x = label_pos.x()
             img_y = label_pos.y()
             if self.image is not None:
-                pixmap_size = self.image_label.pixmap().size()
-                label_size = self.image_label.size()
+                img_h, img_w = self.image.shape[:2]
+                label_w = self.image_label.width()
+                label_h = self.image_label.height()
 
-                # Calculate scaling ratio (image might not fill the label fully)
-                scale_x = pixmap_size.width() / label_size.width()
-                scale_y = pixmap_size.height() / label_size.height()
+                # Scale used by KeepAspectRatio display
+                scale = min(label_w / img_w, label_h / img_h)
+                # Offset of the image within the label (letterbox/pillarbox)
+                offset_x = (label_w - img_w * scale) / 2
+                offset_y = (label_h - img_h * scale) / 2
 
-                img_x = int(img_x * scale_x)
-                img_y = int(img_y * scale_y)
-
-                # Calculate the exact pixel coordinates in the image
-
-                pixmap_width = self.pixmap.width()
-                pixmap_height = self.pixmap.height()
+                img_x = int((img_x - offset_x) / scale)
+                img_y = int((img_y - offset_y) / scale)
 
                 # Ensure the click is within bounds
-                if 0 <= img_x < pixmap_width and 0 <= img_y < pixmap_height:
+                if 0 <= img_x < img_w and 0 <= img_y < img_h:
                     self.statusBar().showMessage(f"Selected: ({img_x}, {img_y})")
                     self.selected_2d_points.append((img_x, img_y))
                     self.draw_circle(QPoint(img_x, img_y),
@@ -628,12 +627,17 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         position: at which the circle has to be placed.
         p_index: index of the point.
         """
+        # Scale radius so the circle is ~4 display pixels regardless of image resolution
+        img_h, img_w = self.image.shape[:2]
+        display_scale = min(self.image_label.width() / img_w,
+                            self.image_label.height() / img_h)
+        radius = max(3, int(4 / display_scale))
+        pen_width = max(1, int(2 / display_scale))
 
         painter = QPainter(self.pixmap)
         pen = QPen(QColor("red"))
-        pen.setWidth(2)
+        pen.setWidth(pen_width)
         painter.setPen(pen)
-        radius = 3
 
         brush = QColor(255, 255, 0, 127)
         painter.setBrush(brush)
@@ -641,8 +645,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         text_offset = position + QPoint(radius+1, -(radius+1))
         painter.drawText(text_offset, f"P{p_index}")
         painter.end()
-
-        self.image_label.setPixmap(self.pixmap)
+        self._update_display_pixmap()
 
     def depth(self):
         """GUI button function. Activates depth mode visualization of point cloud."""
@@ -674,7 +677,6 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         if self.selected_2d_points:
             self.selected_2d_points.pop()
             self.draw_points_on_image(self.selected_2d_points, self.base_image)
-            self.image_label.setPixmap(self.pixmap)
 
         if self.selected_3d_points:
             self.selected_3d_points.pop()
@@ -732,8 +734,34 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         rgb_image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
         self.base_image = rgb_image.copy()
         self.pixmap = image_to_pixmap(rgb_image)
+        self.image_label.setScaledContents(False)
         self.image_label.setPixmap(self.pixmap)
-        self.image_label.setScaledContents(True)
+        self._update_display_pixmap()
+        self._fit_window_to_screen()
+
+    def _update_display_pixmap(self):
+        """Scale self.pixmap to fit the label while maintaining aspect ratio."""
+        if not hasattr(self, 'pixmap') or self.pixmap is None:
+            return
+        scaled = self.pixmap.scaled(
+            self.image_label.size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+        self.image_label.setPixmap(scaled)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_display_pixmap()
+        self._fit_window_to_screen()
+
+    def _fit_window_to_screen(self):
+        """Reposition window so it's fully within the screen it's currently on."""
+        screen = (self.screen() or QApplication.primaryScreen()).availableGeometry()
+        x = max(screen.left(), min(self.x(), screen.right() - self.width()))
+        y = max(screen.top(), min(self.y(), screen.bottom() - self.height()))
+        if self.x() != x or self.y() != y:
+            self.move(x, y)
 
     def draw_points_on_image(self, points: list, rgb_image: np.ndarray | None = None):
         if rgb_image is not None:
@@ -741,6 +769,8 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         for idx, point in enumerate(points):
             q_point = QPoint(point[0], point[1])
             self.draw_circle(q_point, idx)
+        if not points:
+            self._update_display_pixmap()
 
     def start_ev_timer(self):
         """starts the pyqt timer"""
@@ -779,7 +809,9 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
                 for proc in self.pv_processes:
                     if proc.is_alive():
                         proc.terminate()
-                        proc.join()
+                        proc.join(timeout=3)
+                        if proc.is_alive():
+                            proc.kill()
         event.accept()
 
     def confirm_restart(self, reinit=False):
@@ -807,7 +839,8 @@ def main():
     locale.setlocale(locale.LC_NUMERIC, 'C')
     main_window = PrimaryWindow()
     main_window.show()
-    sys.exit(app.exec())
+    app.exec()
+    os._exit(0)
 
 
 if __name__ == "__main__":
