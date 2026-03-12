@@ -1,0 +1,9 @@
+{
+    "rgb_image": "examples/data/dsec/000058/000058rgb.png",
+    "point_cloud": "examples/data/dsec/000058/000058.pcd",
+    "event_image": "examples/data/dsec/000058/000058.png",
+    "intrinsics": "examples/data/dsec/dsec_intrinsics.json",
+    "pnp_points": "examples/data/dsec/000058/points.json",
+    "extrinsics": "pass",
+    "load_state": true
+}
