@@ -95,6 +95,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
                                intrinsics='pass',
                                pnp_points='pass',
                                extrinsics='pass',
+                               auto_axis=self.auto_axis_alignment,
                                load_state=False
                                )
 
@@ -739,6 +740,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
             self.auto_axis_alignment = True
         else:
             self.auto_axis_alignment = False
+        self.state_dict['auto_axis'] = self.auto_axis_alignment
 
     def _on_os_color_scheme_changed(self, scheme):
         is_dark = scheme != Qt.ColorScheme.Light

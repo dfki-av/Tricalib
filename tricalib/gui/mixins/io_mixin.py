@@ -171,6 +171,9 @@ class IOMixin:
             self.load_intrinsics(self.state_dict['intrinsics'])
             self.load_pnp_points(self.state_dict['pnp_points'])
             self.load_extrinsics(self.state_dict['extrinsics'])
+            if 'auto_axis' in self.state_dict:
+                self.auto_axis_alignment = self.state_dict['auto_axis']
+                self.switch.setChecked(self.auto_axis_alignment)
 
     def save_points(self):
         """GUI button function. Saves the selected points to disk in JSON format."""
