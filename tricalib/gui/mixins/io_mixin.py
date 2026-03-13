@@ -32,7 +32,7 @@ class IOMixin:
             if not file_path:
                 return
         data: dict = load_json(file_path)
-        self.state_dict['intrinsics'] = file_path
+        self.state_dict['intrinsics'] = os.path.relpath(file_path)
         self.evt_camera_matrix = fxfycxcy_to_matrix(
             data.get('event_camera_intrinsic'))
         self.rgb_camera_matrix = fxfycxcy_to_matrix(
@@ -50,7 +50,7 @@ class IOMixin:
                 return
 
         data = load_json(file_path)
-        self.state_dict['pnp_points'] = file_path
+        self.state_dict['pnp_points'] = os.path.relpath(file_path)
         if 'image_points' in data:
             self.selected_2d_points.extend(data['image_points'])
             if hasattr(self, 'pixmap'):
@@ -77,7 +77,7 @@ class IOMixin:
                 return
 
         self._extrinsic_data = load_json(file_path)
-        self.state_dict['extrinsics'] = file_path
+        self.state_dict['extrinsics'] = os.path.relpath(file_path)
 
         if 'K_evt' not in self._extrinsic_data:
             try:
@@ -106,7 +106,7 @@ class IOMixin:
                 self, "Load Image", "", "Images (*.png *.jpg)")
             if not file_path:
                 return
-        self.state_dict['rgb_image'] = file_path
+        self.state_dict['rgb_image'] = os.path.relpath(file_path)
         self.image = cv2.imread(file_path)
         self.image_label.setStatusTip(os.path.basename(file_path))
         self.display_image()
@@ -122,7 +122,7 @@ class IOMixin:
                 self, "Load Event Image", "", "Event Images (*.png *.jpg)")
             if not file_path:
                 return
-        self.state_dict['event_image'] = file_path
+        self.state_dict['event_image'] = os.path.relpath(file_path)
         self.event_image = cv2.imread(file_path)
         process = mp.Process(target=run_event_data_visualizer, args=(
             self.child_conn_event, self.event_image, file_path, self._dark_mode))
@@ -140,7 +140,7 @@ class IOMixin:
                 self, "Load Point Cloud", "", "Point Clouds (*.pcd)")
             if not file_path:
                 return
-        self.state_dict['point_cloud'] = file_path
+        self.state_dict['point_cloud'] = os.path.relpath(file_path)
         self.point_cloud = o3d.t.io.read_point_cloud(
             file_path, format='auto')
         self.intensity()

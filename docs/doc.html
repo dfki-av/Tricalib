@@ -321,7 +321,7 @@
   <nav>
     <div class="nav-logo">
       <h1>TriCalib</h1>
-      <span class="version">v0.4</span>
+      <span class="version">v0.5</span>
     </div>
 
     <div class="nav-section">Getting Started</div>
@@ -340,6 +340,7 @@
     <a href="#pc-menu">Point Cloud Menu</a>
     <a href="#help-menu">Help Menu</a>
     <a href="#toolbar">Toolbars</a>
+    <a href="#panels">Panels</a>
 
     <div class="nav-section">Reference</div>
     <a href="#data-formats">Data Formats</a>
@@ -396,8 +397,18 @@
 
     <!-- ── Installation ── -->
     <h2 id="installation">Installation</h2>
-    <pre>git clone https://github.com/your-org/tricalib #TODO
+    <p>This repository uses <a href="https://git-lfs.com/" target="_blank">Git LFS</a> for large binary assets (point clouds and images in <code>examples/</code>).</p>
+    <pre># Install Git LFS (once per machine)
+git lfs install
+
+# Clone the repository
+git clone git@pc-4501.kl.dfki.de:jakkamsetty/tricalib.git
 cd tricalib
+
+# Pull LFS objects
+git lfs pull
+
+# Install in editable mode
 pip install -e .</pre>
 
     <h3>Dependencies</h3>
@@ -449,7 +460,7 @@ pip install -e .</pre>
       </li>
       <li>
         <div>
-          <strong>Select Event camera correspondences (optional)</strong>
+          <strong>Select Event camera correspondences</strong>
           <p>The event image viewer opens in a separate window. Right-click to select
              points that correspond to the same physical features.</p>
         </div>
@@ -614,8 +625,29 @@ pip install -e .</pre>
       <tbody>
         <tr><td>Stereo Rectification toggle</td><td>When <strong>ON</strong>, applies DSEC rectification matrices (<code>DSEC_R_RECT_RGB</code> / <code>DSEC_R_RECT_EVENT</code>) during projection and calibration to correct known rotation misalignments between sensors.</td></tr>
         <tr><td>Auto Axis Alignment toggle</td><td>When <strong>ON</strong>, applies a basis matrix that converts LiDAR coordinate convention to camera convention before any projection or calibration step. Automatically disabled once a calibration is loaded.</td></tr>
+        <tr><td>Dark / Light Mode switch</td><td>Toggles the application theme between dark and light mode. Located in the top-right corner of the main window.</td></tr>
       </tbody>
     </table>
+
+    <!-- ── Interface Panels ── -->
+    <h2 id="panels">Interface Panels</h2>
+    <p>Two docked panels are available on the right side of the main window.</p>
+
+    <h3>Selected Points Table</h3>
+    <p>Displays all currently selected correspondences in a table with eight columns:</p>
+    <table>
+      <thead><tr><th>Column</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>#</td><td>Correspondence index</td></tr>
+        <tr><td>RGB u / RGB v</td><td>Pixel coordinates in the RGB image (integers)</td></tr>
+        <tr><td>LiDAR X / Y / Z</td><td>3D coordinates in the LiDAR frame (4 decimal places)</td></tr>
+        <tr><td>EV u / EV v</td><td>Pixel coordinates in the event camera image (integers)</td></tr>
+      </tbody>
+    </table>
+    <p>Click <strong>Edit Points</strong> to toggle edit mode. In edit mode, double-click any cell to correct a value. Changes immediately update the internal point lists.</p>
+
+    <h3>Calibration Results Panel</h3>
+    <p>Shows the most recently computed extrinsic transform. The rotation matrix <strong>R</strong> and translation vector <strong>t</strong> are displayed in a formatted layout. Use the <strong>Copy to Clipboard</strong> button to export the values as plain text.</p>
 
     <!-- ── Data Formats ── -->
     <h2 id="data-formats">Data Formats</h2>
@@ -657,13 +689,30 @@ pip install -e .</pre>
     <h2 id="api">Module Reference</h2>
 
     <h3>tricalib.gui.maingui</h3>
-    <p>Contains <code>PrimaryWindow</code> — the main application window — and
-       module-level process-entry functions <code>run_pyvista_visualizer</code>,
-       <code>run_event_data_visualizer</code>, and <code>launch_projection_window</code>.</p>
+    <p>Contains <code>PrimaryWindow</code> — the main application window. Inherits from
+       <code>IOMixin</code>, <code>CalibrationMixin</code>, and <code>ProjectionMixin</code>
+       (see <code>tricalib.gui.mixins</code> below).</p>
+
+    <h3>tricalib.gui.mixins</h3>
+    <table>
+      <thead><tr><th>Class</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>IOMixin</td><td>File load/save dialogs and full session state management.</td></tr>
+        <tr><td>CalibrationMixin</td><td>All calibration computation methods: PnP, essential matrix, joint optimization, reprojection error.</td></tr>
+        <tr><td>ProjectionMixin</td><td>Launches projection viewer windows for each sensor pair.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>tricalib.gui.workers</h3>
+    <p>Module-level subprocess entry functions: <code>run_pyvista_visualizer</code>,
+       <code>run_event_data_visualizer</code>, <code>launch_projection_window</code>.
+       These run in separate processes to avoid Qt/OpenGL context conflicts.</p>
 
     <h3>tricalib.gui.secgui</h3>
-    <p><code>SecondaryWindow</code> (event camera viewer) and
-       <code>ReprojectionErrorWindow</code> (metrics dialog).</p>
+    <p><code>ReprojectionErrorWindow</code> — dialog that displays per-pair mean absolute reprojection errors.</p>
+
+    <h3>tricalib.gui.style</h3>
+    <p>Theme system providing dark and light mode stylesheets, dynamic stylesheet switching, and theme-aware icon utilities.</p>
 
     <h3>tricalib.gui.image</h3>
     <p><code>ImageViewer</code> (LiDAR→RGB projection),
@@ -676,7 +725,7 @@ pip install -e .</pre>
       <tbody>
         <tr><td>optimize_calibration()</td><td>Joint LM optimization. Returns dict of three 4×4 matrices.</td></tr>
         <tr><td>reprojection_error()</td><td>Residual function; also callable standalone with <code>return_errors=True</code>.</td></tr>
-        <tr><td>parameters_to_matrices()</td><td>Convert 14- or 21-element param vector to matrix dict.</td></tr>
+        <tr><td>parameters_to_matrices()</td><td>Convert 21-element param vector (3 pairs × quaternion[4] + translation[3]) to matrix dict.</td></tr>
       </tbody>
     </table>
 
@@ -753,9 +802,9 @@ pip install -e .</pre>
 
     <!-- Footer -->
     <footer>
-      <p>TriCalib v0.4 &mdash; Developed at
+      <p>TriCalib v0.5 &mdash; Developed at
          <a href="https://av.dfki.de/" target="_blank">DFKI Augmented Vision Group</a>
-         by <a href="https://av.dfki.de/members/jakkamsetty" target="_blank">Rahul Jakkamsetty</a> &mdash; December 2024 – August 2025 &mdash;
+         by <a href="https://av.dfki.de/members/jakkamsetty" target="_blank">Rahul Jakkamsetty</a> &mdash; December 2024 – March 2026 &mdash;
          <a href='https://creativecommons.org/licenses/by-nc-sa/4.0/' target="_blank">CC BY-NC-SA 4.0</a>
       </p>
     </footer>

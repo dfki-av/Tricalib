@@ -1,0 +1,9 @@
+{
+    "rgb_image": "examples/data/dfki/000236rgb.png",
+    "point_cloud": "examples/data/dfki/000236.pcd",
+    "event_image": "examples/data/dfki/000236_event.png",
+    "intrinsics": "examples/data/dfki/dfki_intrinsics.json",
+    "pnp_points": "examples/data/dfki/points_000236.json",
+    "extrinsics": "pass",
+    "load_state": true
+}

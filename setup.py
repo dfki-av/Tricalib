@@ -21,7 +21,7 @@ dependency_links = [x.strip().replace('git+', '') for x in all_reqs if x.startsw
 # Call the setup.py
 setup(
     name='tricalib',
-    version=0.4,
+    version=0.5,
     author='Rahul Jakkamsetty',
     license='internal',
     packages=find_packages(exclude=['docs', 'libs', 'test*', 'examples', 'debug', 'data']),

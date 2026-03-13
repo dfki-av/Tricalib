@@ -1,35 +1,82 @@
 # TriCalib
 
+Interactive extrinsic calibration tool for RGB camera, LiDAR, and event camera.
 
+## Overview
 
-## Getting started
+TriCalib provides a GUI-based workflow to compute the spatial transformations between three sensor modalities. Two calibration approaches are supported:
 
-### Installation
-Clone the repo using the below command.
+**Pairwise calibration** — solve each sensor pair independently:
+- **RGB camera** ↔ **LiDAR** — via PnP (Perspective-n-Point)
+- **Event camera** ↔ **LiDAR** — via PnP
+- **RGB camera** ↔ **Event camera** — via essential matrix decomposition
+
+**Joint optimization** — optimize all three modality pairs simultaneously via non-linear least-squares over reprojection errors across all pairs.
+
+**Key features:**
+- Interactive 2D/3D point correspondence selection (right-click in image and point cloud viewers)
+- Real-time projection visualization with depth/intensity coloring
+- Reprojection error reporting per modality pair
+- Session save/load as JSON (full calibration state)
+
+## Installation
+
+This repository uses [Git LFS](https://git-lfs.com/) for large binary assets (point clouds, images in `examples/`).
+
 ```bash
+# Install Git LFS (once per machine)
+git lfs install
+
+# Clone the repository
 git clone git@pc-4501.kl.dfki.de:jakkamsetty/tricalib.git
-```
-then 
-```bash
 cd tricalib
-```
-Now install this repo using the following command in edit mode
-```bash
+
+# Pull LFS objects
+git lfs pull
+
+# Install in editable mode
 pip install -e .
 ```
-The tricalib should be installed now.
 
-### Usage
-After installation run the following command to launch the GUI.
+## Usage
+
+Launch the GUI:
+
 ```bash
 python -m tricalib
 ```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+**Workflow:**
+1. Load sensor data — RGB image, event image, LiDAR `.pcd` file, and camera intrinsics JSON
+2. Select corresponding 3D/2D point pairs across modalities using the point cloud and image viewers
+3. Run calibration — either pairwise (PnP or essential matrix per sensor pair) or joint optimization (all pairs simultaneously)
+4. Inspect projections in the viewer windows and check reprojection errors
+6. Save the calibration session to JSON for later use
+
+## Input Data
+
+| File | Format | Description |
+|------|--------|-------------|
+| RGB image | `.png` / `.jpg` | Frame from the RGB camera |
+| Event image | `.png` | Accumulated event frame |
+| Point cloud | `.pcd` | LiDAR scan (Open3D compatible) |
+| Intrinsics | `.json` | Camera intrinsic matrices and distortion coefficients for RGB and event cameras |
+
+See `examples/data/dfki/dfki_intrinsics.json` for the expected intrinsics format.
+
+## Examples
+
+Two example datasets are included under `examples/data/`:
+
+- `dfki/` — DFKI dataset with pre-labeled point correspondences and a saved session
+- `dsec/` — Two sequences from the DSEC dataset (`000044/`, `000058/`)
+
+To try the DFKI example, load the files from `examples/data/dfki/` and import `points_000236.json` as correspondences, or load the full saved state from `session.json`.
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+
+## Authors
+
+Rahul Jakkamsetty — [DFKI](https://www.dfki.de) (German Research Center for Artificial Intelligence)
