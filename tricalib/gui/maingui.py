@@ -47,6 +47,17 @@ from tricalib.misc import image_to_pixmap
 from tricalib.gui.workers import run_pyvista_visualizer
 from tricalib.gui.mixins import IOMixin, CalibrationMixin, ProjectionMixin
 
+_system_font = None  # set once in main(), used by toggle_theme()
+
+
+def _os_prefers_dark(app) -> bool:
+    """Return True if the OS colour scheme is Dark; falls back to True on older Qt or unknown."""
+    try:
+        return app.styleHints().colorScheme() != Qt.ColorScheme.Light
+    except AttributeError:
+        return True  # Qt < 6.5 — default to dark
+
+
 class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
     """Main GUI for the TriCalib application"""
 
@@ -58,7 +69,10 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
 
         # Initialize data structures
-        self._dark_mode = True
+        self._dark_mode = _os_prefers_dark(QApplication.instance())
+        hints = QApplication.instance().styleHints()
+        if hasattr(hints, 'colorSchemeChanged'):
+            hints.colorSchemeChanged.connect(self._on_os_color_scheme_changed)
         self.auto_axis_alignment = False
         self.rotation_rectification = False
         self.depth_axis = 'x'
@@ -262,7 +276,6 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         ev_pc_menu.addSeparator()
         ev_pc_menu.addAction(project_pc_evt)
 
-        # ── Point Cloud Menu ───────────────────────────────────────────────────
         pc_menu = menu.addMenu("&Point Cloud")
         intensity = QAction(ucode_icon("\U0001F506"), "&Intensity Mode", self)
         intensity.setStatusTip(
@@ -377,6 +390,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
             "When enabled, the co-ordinate system of lidar and rgb/event camera sensor are auto-aligned.")
         toolbar_layout.addWidget(axis_label)
         toolbar_layout.addWidget(self.switch)
+
         horiz_toolbar.addWidget(container)
 
         self.image_label = QLabel("2D Image Viewer")
@@ -724,14 +738,20 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         else:
             self.auto_axis_alignment = False
 
+    def _on_os_color_scheme_changed(self, scheme):
+        is_dark = scheme != Qt.ColorScheme.Light
+        if is_dark == self._dark_mode:
+            return  # already matches — user may have manually toggled
+        self._dark_mode = is_dark
+        self.theme_switch.setChecked(is_dark)
+        # stateChanged on theme_switch triggers toggle_theme() automatically
+
     def toggle_theme(self, state):
         self._dark_mode = (state == Qt.CheckState.Checked.value)
-        if self._dark_mode:
-            QApplication.instance().setStyleSheet(DARK_STYLESHEET)
-            icon_color = ICON_COLOR_DARK
-        else:
-            QApplication.instance().setStyleSheet(LIGHT_STYLESHEET)
-            icon_color = ICON_COLOR_LIGHT
+        app = QApplication.instance()
+        app.setStyleSheet(DARK_STYLESHEET if self._dark_mode else LIGHT_STYLESHEET)
+        app.setFont(_system_font)
+        icon_color = ICON_COLOR_DARK if self._dark_mode else ICON_COLOR_LIGHT
         self.undo_action.setIcon(themed_icon(
             './data/icons/undo.svg', icon_color))
         self.error_action.setIcon(themed_icon(
@@ -854,7 +874,10 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
 def main():
     mp.set_start_method('spawn')
     app = QApplication(sys.argv)
-    app.setStyleSheet(DARK_STYLESHEET)
+    global _system_font
+    _system_font = app.font()
+    app.setStyleSheet(DARK_STYLESHEET if _os_prefers_dark(app) else LIGHT_STYLESHEET)
+    app.setFont(_system_font)
     locale.setlocale(locale.LC_NUMERIC, 'C')
     main_window = PrimaryWindow()
     main_window.show()

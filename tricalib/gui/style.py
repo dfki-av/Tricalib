@@ -16,8 +16,8 @@ Developed at DFKI (German Research Center for AI), July – August 2025.
 
 # third-party imports
 from PyQt6.QtWidgets import QCheckBox
-from PyQt6.QtCore import Qt, QRectF
-from PyQt6.QtGui import QPainter, QColor, QBrush, QFont, QPixmap, QIcon
+from PyQt6.QtCore import Qt, QRectF, pyqtProperty, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QPainter, QColor, QBrush, QPixmap, QIcon
 
 # internal imports
 
@@ -32,8 +32,6 @@ DARK_STYLESHEET = """
 QWidget {
     background-color: #1c2128;
     color: #cdd9e5;
-    font-family: "Segoe UI", "Inter", "Arial", sans-serif;
-    font-size: 10pt;
     selection-background-color: #1d6b6b;
     selection-color: #ffffff;
 }
@@ -127,7 +125,6 @@ QToolButton:pressed {
 QStatusBar {
     background-color: #2da8a8;
     color: #ffffff;
-    font-size: 9pt;
     border: none;
 }
 QStatusBar::item {
@@ -284,8 +281,6 @@ LIGHT_STYLESHEET = """
 QWidget {
     background-color: #f6f8fa;
     color: #1f2328;
-    font-family: "Segoe UI", "Inter", "Arial", sans-serif;
-    font-size: 10pt;
     selection-background-color: #b8e8e8;
     selection-color: #1f2328;
 }
@@ -379,7 +374,6 @@ QToolButton:pressed {
 QStatusBar {
     background-color: #2da8a8;
     color: #ffffff;
-    font-size: 9pt;
     border: none;
 }
 QStatusBar::item {
@@ -559,40 +553,44 @@ class Switch(QCheckBox):
         super().__init__(parent)
         self.setChecked(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setFixedSize(45, 25)  # smaller width
+        self.setFixedSize(36, 20)
+        self._knob_x = 2.0
+        self._anim = QPropertyAnimation(self, b"knob_x", self)
+        self._anim.setDuration(150)
+        self._anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self.stateChanged.connect(self._start_animation)
+
+    def _knob_target(self):
+        diameter = self.height() - 4
+        return float(self.width() - diameter - 2) if self.isChecked() else 2.0
+
+    def _start_animation(self):
+        self._anim.stop()
+        self._anim.setStartValue(self._knob_x)
+        self._anim.setEndValue(self._knob_target())
+        self._anim.start()
+
+    @pyqtProperty(float)
+    def knob_x(self):
+        return self._knob_x
+
+    @knob_x.setter
+    def knob_x(self, value):
+        self._knob_x = value
+        self.update()
 
     def paintEvent(self, event):
-        # Painter setup
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # Track (background)
+        r = self.height() / 2
         track_rect = QRectF(0, 0, self.width(), self.height())
-        if self.isChecked():
-            track_color = QColor("#4cd964")  # green when ON
-        else:
-            track_color = QColor("#999")     # gray when OFF
+        track_color = QColor("#2da8a8") if self.isChecked() else QColor("#666")
         painter.setBrush(QBrush(track_color))
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawRoundedRect(track_rect, self.height()/2, self.height()/2)
+        painter.drawRoundedRect(track_rect, r, r)
 
-        # Knob (circle)
-        knob_diameter = self.height() - 6
-        if self.isChecked():
-            knob_x = self.width() - knob_diameter - 3
-        else:
-            knob_x = 3
-        knob_rect = QRectF(knob_x, 3, knob_diameter, knob_diameter)
+        diameter = self.height() - 4
+        knob_rect = QRectF(self._knob_x, 2, diameter, diameter)
         painter.setBrush(QBrush(QColor("#fff")))
         painter.drawEllipse(knob_rect)
-
-        # Text ("ON" / "OFF")
-        painter.setPen(QColor("#fff"))
-        font = QFont()
-        font.setPointSize(7)
-        painter.setFont(font)
-
-        if self.isChecked():
-            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, "  ON")
-        else:
-            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, "OFF  ")
