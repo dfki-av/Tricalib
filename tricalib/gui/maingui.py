@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QMessageBox
                              QWidget, QLabel, QHBoxLayout, QStatusBar,
                              QTableWidget, QTableWidgetItem, QHeaderView)
 from PyQt6.QtCore import Qt, QPoint, QTimer, QSize, QProcess
-from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QAction, QFont
+from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QAction, QFont, QActionGroup
 
 # internal imports
 from tricalib.utils.io import ucode_icon, write_json      
@@ -61,6 +61,8 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         self._dark_mode = True
         self.auto_axis_alignment = False
         self.rotation_rectification = False
+        self.depth_axis = 'x'
+        self._depth_active = False
         self._intrinsics_loaded = False
         self.image = None
         self.point_cloud = None
@@ -273,10 +275,19 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         pc_menu.addAction(intensity)
         pc_menu.addSeparator()
         pc_menu.addAction(depth)
+        pc_menu.addSeparator()
+        depth_axis_menu = pc_menu.addMenu("Depth Axis")
+        depth_axis_group = QActionGroup(self)
+        depth_axis_group.setExclusive(True)
+        for axis, label in [('x', 'X  (e.g. Velodyne)'), ('y', 'Y  (e.g. Blickfeld)'), ('z', 'Z  (vertical)')]:
+            act = QAction(label, self)
+            act.setCheckable(True)
+            act.setChecked(axis == self.depth_axis)
+            act.triggered.connect(lambda _, a=axis: self._set_depth_axis(a))
+            depth_axis_group.addAction(act)
+            depth_axis_menu.addAction(act)
 
-        # ── Help Menu ──────────────────────────────────────────────────────────
-        # Group 1: Documentation
-        # Group 2: Restart / Reinitialize
+    
         help_menu = menu.addMenu("&Help")
 
         docs_action = QAction(ucode_icon("\U0001F4D6"), "&Documentation", self)
@@ -647,14 +658,21 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         painter.end()
         self._update_display_pixmap()
 
+    def _set_depth_axis(self, axis):
+        self.depth_axis = axis
+        if self._depth_active:
+            self.depth()
+
     def depth(self):
         """GUI button function. Activates depth mode visualization of point cloud."""
         output = self.assert_loaded(['pc'])
         if not output:
-            return 
+            return
+        self._depth_active = True
         points = self.point_cloud.point.positions.numpy()
         cloud = pv.PolyData(points)
-        distances = np.min(np.abs(points), axis=1)
+        col = {'x': 0, 'y': 1, 'z': 2}[self.depth_axis]
+        distances = np.abs(points[:, col])
         distances = distances/np.max(distances)
         cloud['Distance'] = distances
         self.display_pointcloud(cloud, scalar='Distance', cmap='rainbow')
@@ -663,7 +681,8 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         """GUI button function. Activates intensity mode visualization of point cloud."""
         output = self.assert_loaded(['pc'])
         if not output:
-            return 
+            return
+        self._depth_active = False
         points = self.point_cloud.point.positions.numpy()
         intensity = self.point_cloud.point.intensity.numpy()
         intensity_norm = intensity/np.max(intensity)
