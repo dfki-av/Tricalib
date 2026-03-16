@@ -164,6 +164,11 @@ class IOMixin:
             self.state_dict = load_json(path)
         except FileNotFoundError:
             return
+        # Normalize paths for cross-platform compatibility (Windows saves backslashes)
+        _path_keys = ['rgb_image', 'point_cloud', 'event_image', 'intrinsics', 'pnp_points', 'extrinsics']
+        for key in _path_keys:
+            if key in self.state_dict and self.state_dict[key] != 'pass':
+                self.state_dict[key] = self.state_dict[key].replace('\\', '/')
         if self.state_dict.get('load_state'):
             self.load_image(self.state_dict['rgb_image'])
             self.load_pointcloud(self.state_dict['point_cloud'])
