@@ -70,7 +70,8 @@ class SecondaryWindow(QMainWindow):
         self.base_image = rgb_image.copy()
         self.pixmap = image_to_pixmap(rgb_image)
         self.image_label.setPixmap(self.pixmap)
-        self.image_label.setScaledContents(True)
+        self.image_label.setScaledContents(False)
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.start_timer()
 
     def draw_points_on_image(self, points: list, rgb_image: np.ndarray | None = None):
@@ -90,23 +91,21 @@ class SecondaryWindow(QMainWindow):
             img_x = label_pos.x()
             img_y = label_pos.y()
 
-            pixmap_size = self.image_label.pixmap().size()
+            img_h, img_w = self.image.shape[:2]
+            label_w = self.image_label.width()
+            label_h = self.image_label.height()
 
-            label_size = self.image_label.size()
+            # KeepAspectRatio: compute scale and letterbox/pillarbox offsets
+            scale = min(label_w / img_w, label_h / img_h)
+            offset_x = (label_w - img_w * scale) / 2
+            offset_y = (label_h - img_h * scale) / 2
 
-            # Calculate scaling ratio (image might not fill the label fully)
-            scale_x = pixmap_size.width() / label_size.width()
-            scale_y = pixmap_size.height() / label_size.height()
+            img_x = int((img_x - offset_x) / scale)
+            img_y = int((img_y - offset_y) / scale)
 
-            img_x = int(img_x * scale_x)
-            img_y = int(img_y * scale_y)
-            # Calculate the exact pixel coordinates in the image
             if self.image_label.pixmap():
-                pixmap_width = self.pixmap.width()
-                pixmap_height = self.pixmap.height()
-
                 # Ensure the click is within bounds
-                if 0 <= img_x < pixmap_width and 0 <= img_y < pixmap_height:
+                if 0 <= img_x < img_w and 0 <= img_y < img_h:
                     self.statusBar().showMessage(f"Selected: ({img_x}, {img_y})")
                     point = (img_x, img_y)
                     self.selected_2d_points.append(point)
