@@ -25,6 +25,20 @@ from tricalib.gui.secgui import ReprojectionErrorWindow
 class CalibrationMixin:
     def __init__(self):
         pass
+
+    def _warn_if_poor_spread(self, points_2d, label=""):
+        """Warns if 2D points don't span at least 10% of the image in both axes."""
+        if len(points_2d) < 4 or self.image is None:
+            return
+        pts = np.array(points_2d)
+        img_h, img_w = self.image.shape[:2]
+        spread_x = (pts[:, 0].max() - pts[:, 0].min()) / img_w
+        spread_y = (pts[:, 1].max() - pts[:, 1].min()) / img_h
+        if spread_x < 0.1 or spread_y < 0.1:
+            QMessageBox.warning(self, "Point Spread Warning",
+                f"{label}Points are clustered in a small region.\n"
+                "Spread them across the image for better calibration accuracy.")
+
     def compute_rp_e(self):
         if not self.assert_loaded():
             return
@@ -55,6 +69,8 @@ class CalibrationMixin:
         if not self.assert_loaded(flags=['event_image', 'image', 'intrinsics']):
             return
 
+        self._warn_if_poor_spread(self.selected_2d_points, "RGB ")
+        self._warn_if_poor_spread(self.selected_ev_points, "Event ")
         if len(self.selected_2d_points) >= 4 and len(self.selected_ev_points) >= 4:
             try:
                 points_rgb = np.array(self.selected_2d_points, dtype=np.float32)
@@ -85,6 +101,7 @@ class CalibrationMixin:
         self._update_results_panel()
 
     def compute_pc_evt_transform(self):
+        self._warn_if_poor_spread(self.selected_ev_points, "Event ")
 
         if self.rotation_rectification:
             rect = DSEC_R_RECT_EVENT
@@ -111,6 +128,7 @@ class CalibrationMixin:
 
     def compute_pc_rgb_transform(self):
         """Computes the transformation matrix from the selected correspondences."""
+        self._warn_if_poor_spread(self.selected_2d_points, "RGB ")
 
         if self.rotation_rectification:
             rect = DSEC_R_RECT_RGB
@@ -137,6 +155,8 @@ class CalibrationMixin:
 
     def compute_all(self):
         """Computes the transfromation matrices of all the modalities simultaneoulsy."""
+        self._warn_if_poor_spread(self.selected_2d_points, "RGB ")
+        self._warn_if_poor_spread(self.selected_ev_points, "Event ")
         if self.rotation_rectification:
             rect_matrices = dict(rgb=DSEC_R_RECT_RGB,
                                  event=DSEC_R_RECT_EVENT)
