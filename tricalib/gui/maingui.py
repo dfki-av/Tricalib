@@ -41,7 +41,8 @@ from PyQt6.QtCore import Qt, QPoint, QTimer, QSize, QProcess
 from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QAction, QFont, QActionGroup
 
 # internal imports
-from tricalib.utils.io import ucode_icon, write_json      
+from tricalib.utils.io import ucode_icon, write_json
+from tricalib.utils.constants import DSEC_R_RECT_RGB, DSEC_R_RECT_EVENT
 from tricalib.gui.style import (Switch, DARK_STYLESHEET, LIGHT_STYLESHEET,
                                          ICON_COLOR_DARK, ICON_COLOR_LIGHT, themed_icon)
 from tricalib.misc import image_to_pixmap
@@ -76,6 +77,10 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
             hints.colorSchemeChanged.connect(self._on_os_color_scheme_changed)
         self.auto_axis_alignment = False
         self.rotation_rectification = False
+        self._rect_source = 'dsec'       # 'dsec' | 'custom'
+        self._custom_rect_path = None    # str path or None
+        self._custom_rect_rgb = None     # np.ndarray (3,3) or None
+        self._custom_rect_event = None   # np.ndarray (3,3) or None
         self.depth_axis = 'x'
         self._depth_active = False
         self._intrinsics_loaded = False
@@ -97,6 +102,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
                                pnp_points='pass',
                                extrinsics='pass',
                                auto_axis=self.auto_axis_alignment,
+                               rect_matrices_path='pass',
                                load_state=False
                                )
 
@@ -382,6 +388,16 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
 
         toolbar_layout.addWidget(rotrect_label)
         toolbar_layout.addWidget(self.rotrect_switch)
+
+        self.rect_source_combo = QComboBox()
+        self.rect_source_combo.addItem("DSEC (built-in)")   # index 0
+        self.rect_source_combo.addItem("Custom...")          # index 1
+        self.rect_source_combo.setVisible(False)
+        self.rect_source_combo.setStatusTip(
+            "Select source for stereo rectification matrices.")
+        self.rect_source_combo.currentIndexChanged.connect(
+            self._on_rect_source_changed)
+        toolbar_layout.addWidget(self.rect_source_combo)
 
         axis_label = QLabel("Auto Axis Alignment:")
 
@@ -730,10 +746,28 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         )
 
     def toggle_rotation_rectification(self, state):
-        if state == Qt.CheckState.Checked.value:
-            self.rotation_rectification = True
+        self.rotation_rectification = (state == Qt.CheckState.Checked.value)
+        self.rect_source_combo.setVisible(self.rotation_rectification)
+        self.state_dict['rect_matrices_path'] = self._rect_source
+
+    def _on_rect_source_changed(self, index):
+        if index == 1:
+            self._load_rect_matrices_from_file()
         else:
-            self.rotation_rectification = False
+            self._rect_source = 'dsec'
+            self.state_dict['rect_matrices_path'] = 'dsec'
+
+   
+    def _get_rect_matrices(self):
+        """Returns (r_rect_rgb, r_rect_event) as np.ndarray (3,3) each.
+        Returns identity matrices when rectification is OFF."""
+        if not self.rotation_rectification:
+            return np.eye(3), np.eye(3)
+        if (self._rect_source == 'custom'
+                and self._custom_rect_rgb is not None
+                and self._custom_rect_event is not None):
+            return self._custom_rect_rgb, self._custom_rect_event
+        return DSEC_R_RECT_RGB, DSEC_R_RECT_EVENT
 
     def toggle_unification(self, state):
         if state == Qt.CheckState.Checked.value:
@@ -848,7 +882,6 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
     
     def closeEvent(self, event):
         """Ensure PyVista process is closed when GUI closes."""
-
         if not self.state_dict['load_state']:
             if os.path.exists('./state_dict.json'):
                 os.remove('./state_dict.json')

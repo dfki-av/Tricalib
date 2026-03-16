@@ -14,6 +14,7 @@ import multiprocessing as mp
 # third-party imports
 import cv2
 import open3d as o3d
+import numpy as np
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QApplication
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
@@ -204,7 +205,7 @@ class IOMixin:
         except FileNotFoundError:
             return
         # Normalize paths for cross-platform compatibility (Windows saves backslashes)
-        _path_keys = ['rgb_image', 'point_cloud', 'event_image', 'intrinsics', 'pnp_points', 'extrinsics']
+        _path_keys = ['rgb_image', 'point_cloud', 'event_image', 'intrinsics', 'pnp_points', 'extrinsics', 'rect_matrices_path']
         for key in _path_keys:
             if key in self.state_dict and self.state_dict[key] != 'pass':
                 self.state_dict[key] = self.state_dict[key].replace('\\', '/')
@@ -218,6 +219,13 @@ class IOMixin:
             if 'auto_axis' in self.state_dict:
                 self.auto_axis_alignment = self.state_dict['auto_axis']
                 self.switch.setChecked(self.auto_axis_alignment)
+            if 'rect_matrices_path' in self.state_dict:
+                rp = self.state_dict.get('rect_matrices_path', 'pass')
+                if rp == 'dsec':
+                    self.rotation_rectification = True
+                    self.rotrect_switch.setChecked(self.rotation_rectification)
+                if rp not in ('pass', 'dsec', '') and rp:
+                    self._load_rect_matrices_from_file_path(rp.replace('\\', '/'))
 
     def save_points(self):
         """GUI button function. Saves the selected points to disk in JSON format."""
@@ -252,3 +260,54 @@ class IOMixin:
                 write_json(file_path, self.state_dict)
             except Exception as e:
                 QMessageBox.critical(self, "Save Error", f"Failed to save state:\n{e}")
+    def _load_rect_matrices_from_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Load Rectification Matrices", "", "JSON File (*.json)")
+        if not file_path:
+            self.rect_source_combo.blockSignals(True)
+            self.rect_source_combo.setCurrentIndex(0)
+            self.rect_source_combo.blockSignals(False)
+            return
+        try:
+            data = load_json(file_path)
+            r_rgb = np.array(data['R_rect_rgb'])
+            r_evt = np.array(data['R_rect_event'])
+            assert r_rgb.shape == (3, 3) and r_evt.shape == (3, 3)
+        except (FileNotFoundError, json.JSONDecodeError, KeyError,
+                AssertionError, Exception) as e:
+            QMessageBox.critical(self, "Load Error",
+                                 f"Failed to load rectification matrices:\n{e}")
+            self.rect_source_combo.blockSignals(True)
+            self.rect_source_combo.setCurrentIndex(0)
+            self.rect_source_combo.blockSignals(False)
+            return
+        self._custom_rect_rgb = r_rgb
+        self._custom_rect_event = r_evt
+        self._custom_rect_path = file_path
+        self._rect_source = 'custom'
+        self.state_dict['rect_matrices_path'] = os.path.relpath(file_path)
+        fname = os.path.basename(file_path)
+        self.rect_source_combo.blockSignals(True)
+        self.rect_source_combo.setItemText(1, f"Custom: {fname}")
+        self.rect_source_combo.blockSignals(False)
+
+    def _load_rect_matrices_from_file_path(self, file_path):
+        """Non-interactive restore used by load_state."""
+        try:
+            data = load_json(file_path)
+            r_rgb = np.array(data['R_rect_rgb'])
+            r_evt = np.array(data['R_rect_event'])
+            assert r_rgb.shape == (3, 3) and r_evt.shape == (3, 3)
+        except Exception as e:
+            QMessageBox.warning(self, "State Restore Warning",
+                                f"Could not restore rect matrices from:\n{file_path}\n{e}")
+            return
+        self._custom_rect_rgb = r_rgb
+        self._custom_rect_event = r_evt
+        self._custom_rect_path = file_path
+        self._rect_source = 'custom'
+        fname = os.path.basename(file_path)
+        self.rect_source_combo.blockSignals(True)
+        self.rect_source_combo.setItemText(1, f"Custom: {fname}")
+        self.rect_source_combo.setCurrentIndex(1)
+        self.rect_source_combo.blockSignals(False)

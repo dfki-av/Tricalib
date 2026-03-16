@@ -15,7 +15,7 @@ import cv2
 from PyQt6.QtWidgets import QMessageBox
 
 # internal imports
-from tricalib.utils.constants import BASIS_MATRIX, DSEC_R_RECT_EVENT, DSEC_R_RECT_RGB
+from tricalib.utils.constants import BASIS_MATRIX
 from tricalib.optim.optimizer import reprojection_error, optimize_calibration
 from tricalib.misc import matrices_to_params
 from tricalib.utils.io import serialize_dict
@@ -48,12 +48,8 @@ class CalibrationMixin:
         else:
             unification = np.eye(3)
 
-        if self.rotation_rectification:
-            rect_matrices = dict(rgb=DSEC_R_RECT_RGB,
-                                 event=DSEC_R_RECT_EVENT)
-        else:
-            rect_matrices = dict(rgb=np.eye(3),
-                                 event=np.eye(3))
+        r_rgb, r_evt = self._get_rect_matrices()
+        rect_matrices = dict(rgb=r_rgb, event=r_evt)
 
         params = matrices_to_params(self._extrinsic_data)
         errors_dict = reprojection_error(params, self.selected_3d_points, self.selected_2d_points, self.selected_ev_points,
@@ -103,10 +99,8 @@ class CalibrationMixin:
     def compute_pc_evt_transform(self):
         self._warn_if_poor_spread(self.selected_ev_points, "Event ")
 
-        if self.rotation_rectification:
-            rect = DSEC_R_RECT_EVENT
-        else:
-            rect = None
+        _, r_evt = self._get_rect_matrices()
+        rect = r_evt if self.rotation_rectification else None
 
         if self.auto_axis_alignment:
             basis = BASIS_MATRIX
@@ -130,10 +124,8 @@ class CalibrationMixin:
         """Computes the transformation matrix from the selected correspondences."""
         self._warn_if_poor_spread(self.selected_2d_points, "RGB ")
 
-        if self.rotation_rectification:
-            rect = DSEC_R_RECT_RGB
-        else:
-            rect = None
+        r_rgb, _ = self._get_rect_matrices()
+        rect = r_rgb if self.rotation_rectification else None
 
         if self.auto_axis_alignment:
             basis = BASIS_MATRIX
@@ -157,12 +149,8 @@ class CalibrationMixin:
         """Computes the transfromation matrices of all the modalities simultaneoulsy."""
         self._warn_if_poor_spread(self.selected_2d_points, "RGB ")
         self._warn_if_poor_spread(self.selected_ev_points, "Event ")
-        if self.rotation_rectification:
-            rect_matrices = dict(rgb=DSEC_R_RECT_RGB,
-                                 event=DSEC_R_RECT_EVENT)
-        else:
-            rect_matrices = dict(rgb=np.eye(3),
-                                 event=np.eye(3))
+        r_rgb, r_evt = self._get_rect_matrices()
+        rect_matrices = dict(rgb=r_rgb, event=r_evt)
 
         if self.auto_axis_alignment:
             basis = BASIS_MATRIX

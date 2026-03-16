@@ -15,7 +15,7 @@ import numpy as np
 
 
 # internal imports
-from tricalib.utils.constants import DSEC_R_RECT_RGB, DSEC_R_RECT_EVENT, BASIS_MATRIX
+from tricalib.utils.constants import BASIS_MATRIX
 from tricalib.gui.workers import launch_projection_window
 from tricalib.gui.image import ImageViewer, EventLidarViewer, EventImageViewer
 
@@ -33,10 +33,7 @@ class ProjectionMixin:
     def project_extrinsics_pc_rgb(self):
         """GUI button function.Opens another windows displaying the projected pointcloud on image."""
 
-        if self.rotation_rectification:
-            rect_matrix = DSEC_R_RECT_RGB
-        else:
-            rect_matrix = np.eye(3)
+        rect_matrix, _ = self._get_rect_matrices()
 
         if self.auto_axis_alignment:
             axis_aligment = BASIS_MATRIX
@@ -55,10 +52,7 @@ class ProjectionMixin:
 
     def project_extrinsics_pc_evt(self):
 
-        if self.rotation_rectification:
-            rect_matrix = DSEC_R_RECT_EVENT
-        else:
-            rect_matrix = np.eye(3)
+        _, rect_matrix = self._get_rect_matrices()
 
         if self.auto_axis_alignment:
             axis_alignment = BASIS_MATRIX
@@ -77,11 +71,8 @@ class ProjectionMixin:
 
     def project_extrinsics_rgb_ev(self):
 
-        if self.rotation_rectification:
-            rect_matrices = dict(rgb=DSEC_R_RECT_RGB,
-                                 event=DSEC_R_RECT_EVENT)
-        else:
-            rect_matrices = None
+        r_rgb, r_evt = self._get_rect_matrices()
+        rect_matrices = dict(rgb=r_rgb, event=r_evt) if self.rotation_rectification else None
 
         process = mp.Process(target=launch_projection_window,
                              kwargs=dict(window=EventImageViewer, evt_image=self.event_image,
