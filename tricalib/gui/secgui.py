@@ -18,6 +18,7 @@ Developed at DFKI (German Research Center for AI), December 2024 – August 2025
 """
 
 # python imports
+from pathlib import Path
 
 
 # third-party imports
@@ -32,6 +33,9 @@ from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QIcon
 from tricalib.misc import image_to_pixmap
 
 
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 class SecondaryWindow(QMainWindow):
     """Secondary Window allocated to visualized Event Data"""
 
@@ -39,7 +43,7 @@ class SecondaryWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Event Image")
         self.setGeometry(200, 200, ev_img.shape[1], ev_img.shape[0])
-        self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
+        self.setWindowIcon(QIcon(str(_PROJECT_ROOT / 'data' / 'icons' / 'start_logo.webp')))
 
         self.image = ev_img
         self.base_image = ev_img.copy()

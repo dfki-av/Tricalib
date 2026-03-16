@@ -27,6 +27,7 @@ import os
 import locale
 import multiprocessing as mp
 import webbrowser
+from pathlib import Path
 
 # third-party imports
 import numpy as np
@@ -48,7 +49,7 @@ from tricalib.gui.workers import run_pyvista_visualizer
 from tricalib.gui.mixins import IOMixin, CalibrationMixin, ProjectionMixin
 
 _system_font = None  # set once in main(), used by toggle_theme()
-
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 def _os_prefers_dark(app) -> bool:
     """Return True if the OS colour scheme is Dark; falls back to True on older Qt or unknown."""
@@ -66,7 +67,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         self.setWindowTitle("TriCalib")
 
         self.setGeometry(100, 100, 1200, 800)
-        self.setWindowIcon(QIcon('./data/icons/start_logo.webp'))
+        self.setWindowIcon(QIcon(str(_PROJECT_ROOT / 'data' / 'icons' / 'start_logo.webp')))
 
         # Initialize data structures
         self._dark_mode = _os_prefers_dark(QApplication.instance())
@@ -607,8 +608,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
 
     def open_docs(self):
         """GUI button function. Opens the HTML doc of TriCalib in default browser."""
-        url = './docs/doc.html'
-        abs_url = os.path.abspath(url)
+        abs_url = str(_PROJECT_ROOT / 'docs' / 'doc.html')
         webbrowser.open(f"file://{abs_url}")
 
     def mousePressEvent(self, event):
