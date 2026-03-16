@@ -35,7 +35,7 @@ import cv2
 import pyvista as pv
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QMessageBox, QToolBar,
                               QSizePolicy, QDockWidget, QPlainTextEdit, QWidget, QPushButton,
-                             QWidget, QLabel, QHBoxLayout, QStatusBar,
+                             QWidget, QLabel, QHBoxLayout, QStatusBar, QComboBox,
                              QTableWidget, QTableWidgetItem, QHeaderView)
 from PyQt6.QtCore import Qt, QPoint, QTimer, QSize, QProcess
 from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QAction, QFont, QActionGroup
