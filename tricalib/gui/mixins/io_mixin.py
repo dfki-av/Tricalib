@@ -8,6 +8,7 @@ Developed at DFKI (German Research Center for AI), March 2026.
 """
 # python imports
 import os
+import json
 import multiprocessing as mp
 
 # third-party imports
@@ -42,6 +43,7 @@ class PointCloudLoader(QThread):
 class IOMixin:
     def __init__(self):
         pass
+
     def load_intrinsics(self, file_path=None):
         if file_path == 'pass':
             return
@@ -50,7 +52,11 @@ class IOMixin:
                 self, "Load Intrinsics", "", "JSON File (*.json)")
             if not file_path:
                 return
-        data: dict = load_json(file_path)
+        try:
+            data: dict = load_json(file_path)
+        except (FileNotFoundError, json.JSONDecodeError, Exception) as e:
+            QMessageBox.critical(self, "Load Error", f"Failed to load intrinsics:\n{e}")
+            return
         self.state_dict['intrinsics'] = os.path.relpath(file_path)
         self.evt_camera_matrix = fxfycxcy_to_matrix(
             data.get('event_camera_intrinsic'))
@@ -67,8 +73,11 @@ class IOMixin:
                 self, "Load Pairwise Points", "", "JSON File (*.json)")
             if not file_path:
                 return
-
-        data = load_json(file_path)
+        try:
+            data = load_json(file_path)
+        except (FileNotFoundError, json.JSONDecodeError, Exception) as e:
+            QMessageBox.critical(self, "Load Error", f"Failed to load points:\n{e}")
+            return
         self.state_dict['pnp_points'] = os.path.relpath(file_path)
         if 'image_points' in data:
             self.selected_2d_points.extend(data['image_points'])
@@ -94,8 +103,11 @@ class IOMixin:
                 self, "Load Extrinsics", "", "JSON File (*.json)")
             if not file_path:
                 return
-
-        self._extrinsic_data = load_json(file_path)
+        try:
+            self._extrinsic_data = load_json(file_path)
+        except (FileNotFoundError, json.JSONDecodeError, Exception) as e:
+            QMessageBox.critical(self, "Load Error", f"Failed to load extrinsics:\n{e}")
+            return
         self.state_dict['extrinsics'] = os.path.relpath(file_path)
 
         if 'K_evt' not in self._extrinsic_data:
@@ -151,7 +163,6 @@ class IOMixin:
 
     def load_pointcloud(self, file_path=None):
         """GUI button function. Loads the point cloud from the disk."""
-        # Load a 3D point cloud
         if file_path == 'pass':
             return
         if not file_path:
@@ -216,14 +227,20 @@ class IOMixin:
             data = dict(image_points=self.selected_2d_points,
                         lidar_points=[i for i in self.selected_3d_points],
                         event_points=self.selected_ev_points)
-            write_json(file_path, data)
+            try:
+                write_json(file_path, data)
+            except Exception as e:
+                QMessageBox.critical(self, "Save Error", f"Failed to save points:\n{e}")
 
     def save_extrinsics(self):
         """GUI button function. Saves the calculated extrinsics to the disk."""
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Save Extrinsics", "", "JSON File (*.json)")
         if file_path:
-            write_json(file_path, self._extrinsic_data)
+            try:
+                write_json(file_path, self._extrinsic_data)
+            except Exception as e:
+                QMessageBox.critical(self, "Save Error", f"Failed to save extrinsics:\n{e}")
 
     def save_state(self):
         """GUI button function. Saves state to the disk."""
@@ -231,4 +248,7 @@ class IOMixin:
             self, "Save State", "", "JSON File (*.json)")
         if file_path:
             self.state_dict['load_state'] = True
-            write_json(file_path, self.state_dict)
+            try:
+                write_json(file_path, self.state_dict)
+            except Exception as e:
+                QMessageBox.critical(self, "Save Error", f"Failed to save state:\n{e}")
