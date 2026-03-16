@@ -855,6 +855,16 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
                         proc.join(timeout=3)
                         if proc.is_alive():
                             proc.kill()
+                            proc.join(timeout=1)
+                    except Exception:
+                        pass
+
+        for conn in (self.parent_conn_lidar, self.parent_conn_event):
+            try:
+                conn.close()
+            except Exception:
+                pass
+
         event.accept()
 
     def confirm_restart(self, reinit=False):
