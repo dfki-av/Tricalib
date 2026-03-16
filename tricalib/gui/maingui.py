@@ -848,9 +848,9 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
                 os.remove('./state_dict.json')
 
         if hasattr(self, "pv_processes"):
-            if self.pv_processes:
-                for proc in self.pv_processes:
-                    if proc.is_alive():
+            for proc in self.pv_processes:
+                if proc.is_alive():
+                    try:
                         proc.terminate()
                         proc.join(timeout=3)
                         if proc.is_alive():
