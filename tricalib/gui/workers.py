@@ -68,7 +68,12 @@ def run_pyvista_visualizer(cloud, scalar, cmap, conn):
     def _setup_timer(pl):
         if not _timer_created[0]:
             _timer_created[0] = True
-            pl.add_timer_event(max_steps=10_000_000, duration=200, callback=poll_pipe)
+            pl.add_timer_event(max_steps=_PIPE_MAX_STEPS, duration=_PIPE_POLL_INTERVAL_MS, callback=poll_pipe)
+
+    # How often the PyVista window polls the pipe for new points from the main window
+    _PIPE_POLL_INTERVAL_MS = 200
+    # Effectively unlimited — timer runs for the lifetime of the visualizer
+    _PIPE_MAX_STEPS = 10_000_000
 
     plotter.add_on_render_callback(_setup_timer)
     plotter.show()
