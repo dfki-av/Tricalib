@@ -13,12 +13,31 @@ import multiprocessing as mp
 # third-party imports
 import cv2
 import open3d as o3d
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QFileDialog, QMessageBox, QApplication
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 
 # internal imports
 from tricalib.utils.io import load_json, fxfycxcy_to_matrix, write_json
 from tricalib.gui.workers import run_event_data_visualizer
+
+
+class PointCloudLoader(QThread):
+    """Background thread for loading point cloud files without blocking the GUI."""
+    loaded = pyqtSignal(object)
+    failed = pyqtSignal(str)
+
+    def __init__(self, file_path):
+        super().__init__()
+        self.file_path = file_path
+
+    def run(self):
+        try:
+            pcd = o3d.t.io.read_point_cloud(self.file_path, format='auto')
+            self.loaded.emit(pcd)
+        except Exception as e:
+            self.failed.emit(str(e))
+
 
 class IOMixin:
     def __init__(self):
@@ -141,8 +160,17 @@ class IOMixin:
             if not file_path:
                 return
         self.state_dict['point_cloud'] = os.path.relpath(file_path)
-        self.point_cloud = o3d.t.io.read_point_cloud(
-            file_path, format='auto')
+        self._pc_loader = PointCloudLoader(file_path)
+        self._pc_loader.loaded.connect(self._on_pointcloud_loaded)
+        self._pc_loader.failed.connect(
+            lambda msg: QMessageBox.critical(self, "Load Error", f"Failed to load point cloud:\n{msg}"))
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        self._pc_loader.start()
+
+    def _on_pointcloud_loaded(self, pcd):
+        """Slot called when PointCloudLoader finishes."""
+        QApplication.restoreOverrideCursor()
+        self.point_cloud = pcd
         self.intensity()
 
     def load_state_button(self):
