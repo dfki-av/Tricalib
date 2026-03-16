@@ -87,9 +87,13 @@ def reprojection_error(params: np.ndarray, points_lidar: list, points_rgb: list,
 
     if isinstance(K_rgb, list):
         K_rgb = np.array(K_rgb)
-
     if isinstance(K_ev, list):
         K_ev = np.array(K_ev)
+
+    if K_rgb.shape != (3, 3):
+        raise ValueError(f"K_rgb must be (3, 3), got {K_rgb.shape}")
+    if K_ev.shape != (3, 3):
+        raise ValueError(f"K_ev must be (3, 3), got {K_ev.shape}")
 
     # Convert rotation quat to rotation matrices
     R_lidar_rgb = quat_to_matrix(rquat_rgb)
