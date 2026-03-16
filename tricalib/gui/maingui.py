@@ -827,17 +827,23 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         self.pc_timer.start(100)
 
     def pc_poll(self):
-        while self.parent_conn_lidar.poll():
-            point = self.parent_conn_lidar.recv()
-            self.selected_3d_points.append(point)
-            self._update_points_panel()
+        try:
+            while self.parent_conn_lidar.poll():
+                point = self.parent_conn_lidar.recv()
+                self.selected_3d_points.append(point)
+                self._update_points_panel()
+        except OSError:
+            pass
 
     def ev_poll(self):
         """gets the point from event image viewer at this timer event."""
-        while self.parent_conn_event.poll():
-            point = self.parent_conn_event.recv()
-            self.selected_ev_points.append(point)
-            self._update_points_panel()
+        try:
+            while self.parent_conn_event.poll():
+                point = self.parent_conn_event.recv()
+                self.selected_ev_points.append(point)
+                self._update_points_panel()
+        except OSError:
+            pass
 
     
     def closeEvent(self, event):
