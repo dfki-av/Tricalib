@@ -19,12 +19,20 @@ TriCalib provides a GUI-based workflow to compute the spatial transformations be
 - Reprojection error reporting per modality pair
 - Session save/load as JSON (full calibration state)
 
+## Requirements
+
+- **Python 3.10** (recommended; 3.9 and 3.12+ are not supported)
+- Git with Git LFS
+
 ## Installation
 
 This repository uses [Git LFS](https://git-lfs.com/) for large binary assets (point clouds, images in `examples/`).
 
 ```bash
-# Install Git LFS (once per machine)
+# Install Git LFS binary (once per machine)
+# macOS:   brew install git-lfs
+# Linux:   sudo apt install git-lfs  (or equivalent)
+# Windows: download installer from https://git-lfs.com
 git lfs install
 
 # Clone the repository
