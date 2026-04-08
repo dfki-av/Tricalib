@@ -67,7 +67,7 @@ class CalibrationMixin:
 
         self._warn_if_poor_spread(self.selected_2d_points, "RGB ")
         self._warn_if_poor_spread(self.selected_ev_points, "Event ")
-        if len(self.selected_2d_points) >= 4 and len(self.selected_ev_points) >= 4:
+        if len(self.selected_2d_points) >= 6 and len(self.selected_ev_points) >= 6:
             try:
                 points_rgb = np.array(self.selected_2d_points, dtype=np.float32)
                 points_evt = np.array(self.selected_ev_points, dtype=np.float32)
@@ -77,6 +77,13 @@ class CalibrationMixin:
                     points_evt, self.evt_camera_matrix)
                 E, mask = cv2.findEssentialMat(
                     points_rgb_norm, points_evt_norm, method=cv2.RANSAC, prob=0.999, threshold=1e-3, maxIters=10000)
+
+                if E is None:
+                    QMessageBox.critical(self, "Calibration Error",
+                                         "Essential matrix computation failed.\n"
+                                         "Try adding more point correspondences or improving their spread.")
+                    return
+                E = E[:3, :3]  # take first candidate if OpenCV returned stacked matrices
 
                 out = cv2.recoverPose(
                     E=E, points1=points_rgb_norm, points2=points_evt_norm, mask=mask)
@@ -93,7 +100,7 @@ class CalibrationMixin:
                                      f"Failed to compute RGB\u2194Event transformation:\n{e}")
                 return
         else:
-            QMessageBox.critical(self, "Error", "Select at least 4 point correspondences.")
+            QMessageBox.critical(self, "Error", "Select at least 6 point correspondences.")
         self._update_results_panel()
 
     def compute_pc_evt_transform(self):
