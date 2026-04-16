@@ -624,7 +624,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
 
     def open_docs(self):
         """GUI button function. Opens the HTML doc of TriCalib in default browser."""
-        abs_url = str(_PROJECT_ROOT / 'docs' / 'doc.html')
+        abs_url = str(_PROJECT_ROOT / 'docs' / 'index.html')
         webbrowser.open(f"file://{abs_url}")
 
     def mousePressEvent(self, event):
