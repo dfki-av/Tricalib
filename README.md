@@ -36,7 +36,7 @@ This repository uses [Git LFS](https://git-lfs.com/) for large binary assets (po
 git lfs install
 
 # Clone the repository
-git clone git@pc-4501.kl.dfki.de:jakkamsetty/tricalib.git
+git clone git@github.com:dfki-av/Tricalib.git
 cd tricalib
 
 # Pull LFS objects
