@@ -174,7 +174,7 @@ class ReprojectionErrorWindow(QDialog):
         self.setWindowTitle("Reprojection Error")
         self.data = data
         self.initUI()
-    
+
     def initUI(self):
         layout = QVBoxLayout()
 
@@ -183,4 +183,29 @@ class ReprojectionErrorWindow(QDialog):
             form.addRow(f"{k}:    ", QLabel(f"{v} px", self))
             layout.addLayout(form)
 
+        self.setLayout(layout)
+
+
+class GTValidationWindow(QDialog):
+    def __init__(self, data: dict, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("GT Validation")
+        self.data = data
+        self.initUI()
+
+    def initUI(self):
+        layout = QVBoxLayout()
+        for key, errs in self.data.items():
+            r = errs['rotation_error_xyz']
+            t = errs['translation_error_xyz']
+            g = errs['geodesic_deg']
+            layout.addWidget(QLabel(f"<b>{key}</b>"))
+            form = QFormLayout()
+            form.addRow("Geodesic distance:", QLabel(f"{g:.4f}°"))
+            form.addRow("Rotation error (x,y,z):",
+                        QLabel(f"[{r[0]:+.4f}°  {r[1]:+.4f}°  {r[2]:+.4f}°]"))
+            form.addRow("Translation error (x,y,z):",
+                        QLabel(f"[{t[0]:+.6f}  {t[1]:+.6f}  {t[2]:+.6f}] m"))
+            layout.addLayout(form)
+            layout.addWidget(QLabel("─" * 40))
         self.setLayout(layout)

@@ -84,6 +84,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         self.depth_axis = 'x'
         self._depth_active = False
         self._intrinsics_loaded = False
+        self._ext_gt_loaded = False
         self.image = None
         self.point_cloud = None
         self.selected_2d_points = []
@@ -155,6 +156,10 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         load_state.setStatusTip("Load state of tool from disk")
         load_state.triggered.connect(self.load_state_button)
 
+        load_gt = QAction(ucode_icon("\U0001F4E4"), f"Load &GT \U0001F331", self)
+        load_gt.setStatusTip("Load GT Extrinsic from disk")
+        load_gt.triggered.connect(self.load_gt_calib)
+
         save_state = QAction(ucode_icon("\U0001F4BE"),
                              f"Save Stat&e \U0001F5C3", self)
         save_state.setStatusTip("Load state of tool from disk")
@@ -184,7 +189,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
 
         # — Configuration —
         file_menu.addAction(load_k)
-
+        file_menu.addAction(load_gt)
         file_menu.addSeparator()
 
         # — Session (load) —
@@ -193,6 +198,7 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
         load_session_menu.addAction(load_pts)
         load_session_menu.addAction(load_calib)
         load_session_menu.addAction(load_state)
+    
 
         file_menu.addSeparator()
 
@@ -361,6 +367,11 @@ class PrimaryWindow(QMainWindow, IOMixin, CalibrationMixin, ProjectionMixin):
             "Calculates reprojections error for selected points")
         self.error_action.triggered.connect(self.compute_rp_e)
         toolbar.addAction(self.error_action)
+
+        self.gt_action = QAction(ucode_icon("\U0001F331"), "Validation with GT", self)
+        self.gt_action.setStatusTip("Calculates the error w.r.to Ground Truth")
+        self.gt_action.triggered.connect(self.compute_gt_e)
+        toolbar.addAction(self.gt_action)
 
         horiz_toolbar = QToolBar("Horizon Toolbar")
         horiz_toolbar.setIconSize(QSize(24, 24))

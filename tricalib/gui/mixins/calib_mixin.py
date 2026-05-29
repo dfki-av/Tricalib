@@ -17,10 +17,10 @@ from PyQt6.QtWidgets import QMessageBox
 # internal imports
 from tricalib.utils.constants import BASIS_MATRIX
 from tricalib.optim.optimizer import reprojection_error, optimize_calibration
-from tricalib.misc import matrices_to_params
+from tricalib.misc import matrices_to_params, decompose_T, geodesic_distance_from_rotm
 from tricalib.utils.io import serialize_dict
-from tricalib.utils.projection import normalize_pixels, compute_pnp_transform
-from tricalib.gui.secgui import ReprojectionErrorWindow
+from tricalib.utils.projection import normalize_pixels, compute_pnp_transform, rotation_error, translation_error
+from tricalib.gui.secgui import ReprojectionErrorWindow, GTValidationWindow
 
 class CalibrationMixin:
     def __init__(self):
@@ -58,6 +58,35 @@ class CalibrationMixin:
         for k in errors_dict:
             errors_dict[k] = np.round(np.abs(errors_dict[k].mean()), 4)
         dlg = ReprojectionErrorWindow(errors_dict, self)
+        dlg.show()
+
+    def compute_gt_e(self):
+        if not self.assert_loaded(flags=['event_image', 'image', 'pc', 'intrinsics', 'extrinsics_gt']):
+            return
+
+        transform_keys = ["T_lidar_to_rgb", "T_lidar_to_evt", "T_rgb_to_evt"]
+        errors = {}
+        for key in transform_keys:
+            if key not in self._extrinsic_data or key not in self.ext_gt_data:
+                continue
+            T_pred = np.array(self._extrinsic_data[key])
+            T_gt   = np.array(self.ext_gt_data[key])
+            R_pred, t_pred = decompose_T(T_pred)
+            R_gt,   t_gt   = decompose_T(T_gt)
+            geodesic, _ = geodesic_distance_from_rotm(R_pred, R_gt, fix_numeric=True)
+            errors[key] = dict(
+                rotation_error_xyz    = rotation_error(R_pred, R_gt),
+                translation_error_xyz = translation_error(t_pred, t_gt),
+                geodesic_deg          = geodesic,
+            )
+
+        if not errors:
+            QMessageBox.warning(self, "GT Validation",
+                "No matching transforms found.\n"
+                "GT file must use keys: T_lidar_to_rgb, T_lidar_to_evt, T_rgb_to_evt")
+            return
+
+        dlg = GTValidationWindow(errors, self)
         dlg.show()
 
     def compute_evt_rgb_transform(self):
@@ -188,5 +217,13 @@ class CalibrationMixin:
         if not self._intrinsics_loaded and 'intrinsics' in flags:
             QMessageBox.critical(self, 'Error Intrinsics',
                                  'Intrinsics not loaded.')
+            return False
+        if not self._ext_gt_loaded and 'extrinsics_gt' in flags:
+            QMessageBox.critical(self, "Error GT Extrinsics",
+                                 "GT Extrinsics not loaded.")
+            return False
+        if 'extrinsics_gt' in flags and not self._extrinsic_data:
+            QMessageBox.critical(self, "Error Extrinsics",
+                                 "Extrinsics not computed yet. Please compute extrinsics.")
             return False
         return True

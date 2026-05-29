@@ -6,16 +6,17 @@ Developed at DFKI in DEC-JAN 2024-25.
 """
 # python imports
 
+from math import degrees
 from typing import Optional
 # third-party imports
 import numpy as np
 import cv2
 from PyQt6.QtWidgets import QMessageBox
+from scipy.spatial.transform import Rotation as R
 
 # internal imports
 from tricalib.utils.constants import (CAMERA4_C2_DISTORTION, CAMERA4_C2_KMATRIX, BASIS_MATRIX,
-                                               DSEC_R_RECT_EVENT, DSEC_R_RECT_RGB, DSEC_T_GT)
-
+                                      DSEC_R_RECT_EVENT, DSEC_R_RECT_RGB, DSEC_T_GT)
 
 
 def undistort_fisheye(image, return_newk=False):
@@ -156,9 +157,11 @@ def compute_pnp_transform(_2d_pts: list, _3d_pts: list, K: np.ndarray, U: np.nda
             T_lidar_to_cam = T@np.linalg.inv(um)
             return T_lidar_to_cam, um
         else:
-            QMessageBox.critical(parent, 'Computation Error', "Unable to compute transformation. Please adjust correspondences.")
+            QMessageBox.critical(parent, 'Computation Error',
+                                 "Unable to compute transformation. Please adjust correspondences.")
     else:
-        QMessageBox.critical(parent, "Error", "Select at least 4 point correspondences.")
+        QMessageBox.critical(
+            parent, "Error", "Select at least 4 point correspondences.")
     return None
 
 
@@ -259,3 +262,17 @@ def visualize_rgb_event(evt_img, rgb_img, K_ev, K_rgb, extrinsics, rect_matrices
     proj_img = cv2.cvtColor(proj_img, cv2.COLOR_BGR2RGB)
 
     return proj_img
+
+
+def rotation_error(R_est: np.ndarray, R_gt: np.ndarray) -> np.ndarray:
+    """
+    calculates the rotation error.
+    """
+    R_err = R_est@R_gt.T
+    R_rel = R.from_matrix(R_err)
+    euler_errors = R_rel.as_euler("xyz", degrees=True)
+    return euler_errors
+
+
+def translation_error(t_est: np.ndarray, t_gt: np.ndarray) -> np.ndarray:
+    return np.abs(t_est-t_gt)

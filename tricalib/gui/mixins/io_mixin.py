@@ -20,7 +20,7 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 
 # internal imports
-from tricalib.utils.io import load_json, fxfycxcy_to_matrix, write_json
+from tricalib.utils.io import load_json, fxfycxcy_to_matrix, write_json, load_yaml
 from tricalib.gui.workers import run_event_data_visualizer
 
 
@@ -92,6 +92,33 @@ class IOMixin:
             self.parent_conn_event.send(("LOAD", self.selected_ev_points))
         self._update_points_panel()
 
+    def load_gt_calib(self, path_to_calib: str) -> None:
+        """
+        loads the Ground truth extrinsic calibration.
+        """
+
+        if path_to_calib == 'pass':
+            return
+        if not path_to_calib:
+            path_to_calib, _ = QFileDialog.getOpenFileName(
+                self, "Load Ground Truth Extrinsics", "", "JSON File (*.json), YAML File(*.yaml), YAML File(*.yml)")
+            if not path_to_calib:
+                return
+
+        if path_to_calib.endswith(".json"):
+            method = load_json
+        elif path_to_calib.endswith(".yaml") or path_to_calib.endswith(".yml"):
+            method = load_yaml
+        else:
+            QMessageBox.critical(self, "Load Error", f"Unsupported File Format. Currently supports only '.json', '.yaml'.")
+    
+        try:
+            self.ext_gt_data = method(path_to_calib)
+        except Exception as e:
+            QMessageBox.critical(self, "Load Error", f"Failed to load GT Extrinsics: \n {e}")
+
+        self._ext_gt_loaded = True
+     
 
     def load_extrinsics(self, file_path=None):
         """GUI button function. Loads the extrinsics file stored on the disk."""
