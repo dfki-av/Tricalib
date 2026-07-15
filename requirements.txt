@@ -6,3 +6,4 @@ PyQt6
 pyvista
 pyyaml
 scipy
+pytest
