@@ -54,8 +54,8 @@ Existing open-source tools do not collectively address this combination. Kalibr 
 As per the \autoref{tab:table1}, `Tri-Calib` fills this gap. To the best of our knowledge, it is the only open-source tool that jointly calibrates LiDAR, RGB, and event cameras in a target-free, single-frame, initialization-free setting via an interactive GUI. The target audience is robotics and computer vision researchers who assemble custom sensor rigs and need a practical, accessible calibration workflow without specialized hardware setups.
 
 
-| Tool | Target-free | LiDAR | RGB | Event | Joint Opt. | GUI |
-|------|:-----------:|:-----:|:---:|:-----:|:----------:|:---:|
+| Tool                             | Target-free | LiDAR | RGB | Event | Joint Opt. | GUI |
+|----------------------------------|:-----------:|:-----:|:---:|:-----:|:----------:|:---:|
 | Kalibr [@kalibr] | \xmark | \xmark | \cmark | \xmark | \xmark | \xmark |
 | OpenCalib [@opencalib] | ~  | \cmark | \cmark | \xmark | \xmark | ~ |
 | LCE-Calib [@lcecalib] | \xmark | \cmark | \cmark | \cmark | \xmark | \xmark |
@@ -65,7 +65,7 @@ As per the \autoref{tab:table1}, `Tri-Calib` fills this gap. To the best of our 
 | Bertogalli et al. [@targetalignall] | \xmark | \cmark | \cmark | \cmark | \xmark | \xmark |
 | **Tri-Calib (ours)** | \cmark | \cmark | \cmark | \cmark | \cmark | \cmark |
 
-*\label{tab:table1} Table 1: Feature comparison of calibration tools. \cmark = supported, \xmark = not supported, ~ = partial support.*
+\label{tab:table1} Feature comparison of calibration tools. \cmark = supported, \xmark = not supported, ~ = partial support.
 
 The choice to build a new tool rather than extend an existing one is justified by the structural incompatibility of current approaches with event cameras. Automatic targetless methods rely on dense image features that event cameras do not produce; target-based methods require purpose-built hardware that most event camera setups do not include. `Tri-Calib` sidesteps both constraints by delegating feature selection to the user, who can identify visually salient correspondences across the heterogeneous sensor outputs without additional hardware.
 
