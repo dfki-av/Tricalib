@@ -27,7 +27,7 @@ affiliations:
     name: DFKI – German Research Center for Artificial Intelligence, Kaiserslautern, Germany
   - index: 2
     name: RPTU – University of Kaiserslautern-Landau, Kaiserslautern, Germany
-date: 24 July 2026
+date: 27 July 2026
 
 bibliography: paper.bib
 
