@@ -53,6 +53,8 @@ Existing open-source tools do not collectively address this combination. Kalibr 
 
 As per the \autoref{tab:table1}, `Tri-Calib` fills this gap. To the best of our knowledge, it is the only open-source tool that jointly calibrates LiDAR, RGB, and event cameras in a target-free, single-frame, initialization-free setting via an interactive GUI. The target audience is robotics and computer vision researchers who assemble custom sensor rigs and need a practical, accessible calibration workflow without specialized hardware setups.
 
+# State of the Field
+\autoref{tab:table1} positions `Tri-Calib` relative to the most relevant and existing calibration tools in the field.
 
 | Tool                                       | Target-free | LiDAR | RGB | Event | Joint Opt. | GUI |
 |--------------------------------------------|:-----------:|:-----:|:---:|:-----:|:----------:|:---:|
